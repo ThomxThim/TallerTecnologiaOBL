@@ -1,21 +1,44 @@
-require('@nomiclabs/hardhat-ethers');
-require('hardhat-contract-sizer');
-require('solidity-coverage');
+require("@nomicfoundation/hardhat-toolbox");
 require('dotenv').config();
-require("@nomicfoundation/hardhat-chai-matchers");
 
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   paths: {
-    sources: "./src",
+    sources: "./contracts",
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"
   },
   networks: {
-    /*sepolia: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
-    },*/
+    hardhat: {
+      chainId: 1337
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545"
+    }
+    // Uncomment and configure these when you have actual API keys
+    // sepolia: {
+    //   url: process.env.INFURA_PROJECT_ID ? `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}` : "",
+    //   accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    // },
+    // polygon_mumbai: {
+    //   url: process.env.INFURA_PROJECT_ID ? `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_PROJECT_ID}` : "",
+    //   accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    // }
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS !== undefined,
+    currency: "USD",
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
