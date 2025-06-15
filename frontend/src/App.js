@@ -860,15 +860,30 @@ function App() {
       setLoading(false);
     }
   };
-
   const checkOwnership = async () => {
-    if (!contract || !account) return;
+    if (!contract || !account) {
+      console.log('checkOwnership: No hay contrato o cuenta', { contract: !!contract, account });
+      return;
+    }
     
     try {
+      console.log('checkOwnership: Verificando ownership...');
       const owner = await contract.owner();
+      console.log('checkOwnership: Owner del contrato:', owner);
+      console.log('checkOwnership: Cuenta actual:', account);
+      
       const isCurrentUserOwner = owner.toLowerCase() === account.toLowerCase();
+      console.log('checkOwnership: ¿Es owner?', isCurrentUserOwner);
+      
       setIsOwner(isCurrentUserOwner);
+      
+      if (isCurrentUserOwner) {
+        console.log('✅ Usuario confirmado como owner del contrato');
+      } else {
+        console.log('❌ Usuario NO es owner del contrato');
+      }
     } catch (error) {
+      console.error('Error verificando ownership:', error);
       setIsOwner(false);
     }
   };
@@ -1078,6 +1093,34 @@ function App() {
     }
   };
 
+  // Función para debug del estado de ownership
+  const debugOwnership = () => {
+    console.log('=== DEBUG OWNERSHIP ===');
+    console.log('Account:', account);
+    console.log('Contract:', contract?.target);
+    console.log('IsOwner:', isOwner);
+    console.log('Expected Owner Address:', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
+    console.log('Current Account Match:', account?.toLowerCase() === '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'.toLowerCase());
+    
+    if (contract) {
+      contract.owner().then(owner => {
+        console.log('Contract Owner from blockchain:', owner);
+        console.log('Addresses match:', owner.toLowerCase() === account?.toLowerCase());
+      }).catch(err => {
+        console.error('Error getting owner from contract:', err);
+      });
+    }
+    console.log('=== END DEBUG ===');
+  };
+
+  // Effect para verificar ownership cuando cambie la cuenta o contrato
+  useEffect(() => {
+    if (contract && account) {
+      console.log('Account o Contract cambió, verificando ownership...');
+      checkOwnership();
+    }
+  }, [contract, account]);
+
   return (
     <div className="container">
       <Toaster position="top-right" />
@@ -1277,11 +1320,29 @@ function App() {
                 onClick={() => setActiveTab('admin')}
               >
                 👑 Admin
-              </button>
-            )}
+              </button>            )}
           </div>
 
-          {loading && <div className="loading">Cargando...</div>}          {activeTab === 'dashboard' && (
+          {/* Botones de debug temporales */}
+          {account && (
+            <div className="debug-section" style={{background: '#f3f4f6', padding: '10px', margin: '10px 0', borderRadius: '5px'}}>
+              <strong>🔧 Debug Tools:</strong>
+              <button onClick={debugOwnership} style={{margin: '5px', padding: '5px 10px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+                Debug Ownership
+              </button>
+              <button onClick={debugProposals} style={{margin: '5px', padding: '5px 10px', background: '#10b981', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+                Debug Propuestas
+              </button>
+              <button onClick={() => checkOwnership()} style={{margin: '5px', padding: '5px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+                Re-check Owner
+              </button>
+              <span style={{margin: '0 10px', fontSize: '0.9rem'}}>
+                IsOwner: <strong style={{color: isOwner ? 'green' : 'red'}}>{isOwner ? 'SÍ' : 'NO'}</strong>
+              </span>
+            </div>
+          )}
+
+          {loading && <div className="loading">Cargando...</div>}{activeTab === 'dashboard' && (
             <div className="card">
               <h2>📊 Dashboard</h2>
               <div className="stats-grid">
