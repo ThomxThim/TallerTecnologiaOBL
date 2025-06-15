@@ -30,7 +30,7 @@ const DAO_ABI = [
   "event ProposalExecuted(uint256 indexed proposalId, uint8 result)"
 ];
 
-const DAO_CONTRACT_ADDRESS = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+const DAO_CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 function App() {
   const [account, setAccount] = useState('');
@@ -38,8 +38,10 @@ function App() {
   const [signer, setSigner] = useState(null);
   const [contract, setContract] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [connectedWalletType, setConnectedWalletType] = useState('');
+  const [loading, setLoading] = useState(false);  const [connectedWalletType, setConnectedWalletType] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [networkError, setNetworkError] = useState('');
+  const [connectionError, setConnectionError] = useState('');
   
   const [balance, setBalance] = useState('0');
   const [staking, setStaking] = useState({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
@@ -61,58 +63,114 @@ function App() {
   const [parameterName, setParameterName] = useState('');
   const [parameterValue, setParameterValue] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-
+  // Función mejorada para detectar wallets disponibles
   const detectWallets = () => {
     const wallets = { metamask: false, rabby: false, generic: false };
-    if (typeof window.ethereum !== 'undefined') {
-      if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
-        window.ethereum.providers.forEach(provider => {
-          if (provider.isMetaMask) wallets.metamask = true;
-          if (provider.isRabby) wallets.rabby = true;
+    
+    if (typeof window.ethereum === 'undefined') {
+      console.log('No hay ethereum provider disponible');
+      return wallets;
+    }
+
+    // Si hay múltiples providers
+    if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+      console.log('Múltiples providers detectados:', window.ethereum.providers.length);
+      window.ethereum.providers.forEach((provider, index) => {
+        console.log(`Provider ${index}:`, {
+          isMetaMask: provider.isMetaMask,
+          isRabby: provider.isRabby,
+          chainId: provider.chainId
         });
+        if (provider.isMetaMask) wallets.metamask = true;
+        if (provider.isRabby) wallets.rabby = true;
+      });
+    } else {
+      // Un solo provider
+      console.log('Un solo provider detectado:', {
+        isMetaMask: window.ethereum.isMetaMask,
+        isRabby: window.ethereum.isRabby,
+        chainId: window.ethereum.chainId
+      });
+      
+      if (window.ethereum.isMetaMask) {
+        wallets.metamask = true;
+      } else if (window.ethereum.isRabby) {
+        wallets.rabby = true;
       } else {
-        if (window.ethereum.isMetaMask) {
-          wallets.metamask = true;
-        } else if (window.ethereum.isRabby) {
-          wallets.rabby = true;
-        } else {
-          wallets.generic = true;
-        }
+        wallets.generic = true;
       }
     }
+    
+    console.log('Wallets detectadas:', wallets);
     return wallets;
   };
 
+  // Función mejorada para obtener el provider específico
   const getProvider = (walletType) => {
-    if (typeof window.ethereum === 'undefined') return null;
+    if (typeof window.ethereum === 'undefined') {
+      console.error('No hay ethereum provider disponible');
+      return null;
+    }
+
     if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
       if (walletType === 'metamask') {
-        return window.ethereum.providers.find(provider => provider.isMetaMask);
+        const provider = window.ethereum.providers.find(p => p.isMetaMask);
+        console.log('MetaMask provider encontrado:', !!provider);
+        return provider;
       } else if (walletType === 'rabby') {
-        return window.ethereum.providers.find(provider => provider.isRabby);
+        const provider = window.ethereum.providers.find(p => p.isRabby);
+        console.log('Rabby provider encontrado:', !!provider);
+        return provider;
       }
     } else {
       if (walletType === 'metamask' && window.ethereum.isMetaMask) {
+        console.log('MetaMask provider único encontrado');
         return window.ethereum;
       } else if (walletType === 'rabby' && window.ethereum.isRabby) {
+        console.log('Rabby provider único encontrado');
         return window.ethereum;
       } else if (walletType === 'generic') {
+        console.log('Provider genérico encontrado');
         return window.ethereum;
       }
     }
+    
+    console.error(`Provider ${walletType} no encontrado`);
     return null;
   };
-
+  // Función mejorada para cambiar a la red de Hardhat
   const switchToHardhatNetwork = async (ethereum) => {
+    if (!ethereum) {
+      console.error('No hay provider disponible para cambiar red');
+      return false;
+    }
+
     try {
+      console.log('Intentando cambiar a red Hardhat (chainId: 0x539)');
+      
+      // Verificar red actual
+      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+      console.log('Red actual:', currentChainId);
+      
+      if (currentChainId === '0x539') {
+        console.log('Ya estás en la red correcta');
+        return true;
+      }
+
+      // Intentar cambiar a la red
       try {
         await ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: '0x539' }],
         });
+        console.log('Red cambiada exitosamente');
         return true;
       } catch (switchError) {
+        console.log('Error al cambiar red:', switchError);
+        
+        // Si la red no existe (error 4902), agregarla
         if (switchError.code === 4902) {
+          console.log('Agregando red Hardhat a MetaMask');
           try {
             await ethereum.request({
               method: 'wallet_addEthereumChain',
@@ -124,102 +182,349 @@ function App() {
                 blockExplorerUrls: null,
               }],
             });
+            console.log('Red Hardhat agregada exitosamente');
             return true;
           } catch (addError) {
-            toast.error('Error configurando la red local de Hardhat');
+            console.error('Error agregando red Hardhat:', addError);
+            toast.error('Error agregando la red local de Hardhat. Asegúrate de que Hardhat esté ejecutándose en localhost:8545');
             return false;
           }
+        } else if (switchError.code === 4001) {
+          console.log('Usuario rechazó el cambio de red');
+          toast.error('Necesitas cambiar a la red local de Hardhat para usar la aplicación');
+          return false;
         } else {
-          toast.error('Error cambiando a la red local de Hardhat');
+          console.error('Error desconocido al cambiar red:', switchError);
+          toast.error(`Error cambiando a la red local: ${switchError.message || 'Error desconocido'}`);
           return false;
         }
       }
     } catch (error) {
-      toast.error('Error configurando la red');
+      console.error('Error general en switchToHardhatNetwork:', error);
+      toast.error(`Error configurando la red: ${error.message || 'Error desconocido'}`);
       return false;
     }
   };
-
+  // Función mejorada para conectar wallet específica
   const connectSpecificWallet = async (walletType) => {
+    if (isConnecting) {
+      console.log('Ya hay una conexión en progreso');
+      return;
+    }
+
     try {
+      setIsConnecting(true);
+      setConnectionError('');
+      setNetworkError('');
+      console.log(`Iniciando conexión con ${walletType}`);
+
+      // Verificar disponibilidad del provider
       const ethereum = getProvider(walletType);
-      
       if (!ethereum) {
-        toast.error(`${walletType} no está disponible`);
+        const errorMsg = `${walletType} no está disponible. ¿Está instalado?`;
+        setConnectionError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
 
+      console.log(`Provider ${walletType} encontrado`);
+
+      // Verificar conexión a la red correcta
       const networkConfigured = await switchToHardhatNetwork(ethereum);
       if (!networkConfigured) {
-        toast.error('Necesitas estar en la red local de Hardhat (localhost:8545)');
+        setNetworkError('Red incorrecta');
         return;
       }
 
-      const provider = new ethers.BrowserProvider(ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
-      const signer = await provider.getSigner();
-      
+      console.log('Red configurada correctamente');
+
+      // Crear provider de ethers
+      let provider;
+      try {
+        provider = new ethers.BrowserProvider(ethereum);
+        console.log('Provider de ethers creado');
+      } catch (providerError) {
+        console.error('Error creando provider de ethers:', providerError);
+        toast.error(`Error creando conexión: ${providerError.message}`);
+        return;
+      }
+
+      // Solicitar acceso a cuentas
+      let accounts;
+      try {
+        console.log('Solicitando acceso a cuentas...');
+        accounts = await provider.send('eth_requestAccounts', []);
+        console.log('Cuentas obtenidas:', accounts);
+      } catch (accountError) {
+        console.error('Error obteniendo cuentas:', accountError);
+        if (accountError.code === 4001) {
+          toast.error('Conexión rechazada por el usuario');
+        } else {
+          toast.error(`Error obteniendo cuentas: ${accountError.message}`);
+        }
+        return;
+      }
+
+      if (!accounts || accounts.length === 0) {
+        toast.error('No se pudieron obtener cuentas de la wallet');
+        return;
+      }
+
+      // Obtener signer
+      let signer;
+      try {
+        console.log('Obteniendo signer...');
+        signer = await provider.getSigner();
+        console.log('Signer obtenido para cuenta:', await signer.getAddress());
+      } catch (signerError) {
+        console.error('Error obteniendo signer:', signerError);
+        toast.error(`Error obteniendo signer: ${signerError.message}`);
+        return;
+      }
+
+      // Crear instancia del contrato
+      let contract;
+      try {
+        console.log('Creando instancia del contrato...');
+        contract = new ethers.Contract(DAO_CONTRACT_ADDRESS, DAO_ABI, signer);
+        console.log('Contrato creado:', contract.target);
+      } catch (contractError) {
+        console.error('Error creando contrato:', contractError);
+        toast.error(`Error creando contrato: ${contractError.message}`);
+        return;
+      }
+
+      // Verificar que el contrato esté desplegado
+      try {
+        console.log('Verificando contrato...');
+        const code = await provider.getCode(DAO_CONTRACT_ADDRESS);
+        if (code === '0x') {
+          throw new Error('El contrato no está desplegado en esta dirección');
+        }
+        console.log('Contrato verificado exitosamente');
+      } catch (verifyError) {
+        console.error('Error verificando contrato:', verifyError);
+        toast.error(`Error: ${verifyError.message}. ¿Está desplegado el contrato?`);
+        return;
+      }
+
+      // Actualizar estado de la aplicación
       setProvider(provider);
       setSigner(signer);
       setAccount(accounts[0]);
       setConnectedWalletType(walletType);
-      
-      const contract = new ethers.Contract(DAO_CONTRACT_ADDRESS, DAO_ABI, signer);
       setContract(contract);
       
+      console.log(`${walletType} conectada exitosamente`);
       toast.success(`${walletType} conectada exitosamente!`);
-      loadDashboardData(contract, accounts[0]);
 
-      ethereum.on('accountsChanged', (accounts) => {
-        if (accounts.length === 0) {
-          disconnectWallet();
-        } else {
-          setAccount(accounts[0]);
-          loadDashboardData(contract, accounts[0]);
-        }
-      });
+      // Cargar datos del dashboard
+      try {
+        await loadDashboardData(contract, accounts[0]);
+      } catch (loadError) {
+        console.error('Error cargando datos del dashboard:', loadError);
+        toast.error(`Advertencia: Error cargando datos: ${loadError.message}`);
+      }
 
-      ethereum.on('chainChanged', () => {
-        window.location.reload();
-      });
+      // Configurar listeners de eventos (solo una vez)
+      setupWalletEventListeners(ethereum, contract);
 
     } catch (error) {
+      console.error(`Error general conectando ${walletType}:`, error);
+      setConnectionError(error.message);
       toast.error(`Error conectando ${walletType}: ${error.message}`);
+    } finally {
+      setIsConnecting(false);
     }
-  };  const disconnectWallet = async () => {
+  };
+
+  // Effect para detectar conexión existente al cargar la página
+  useEffect(() => {
+    const detectExistingConnection = async () => {
+      if (typeof window.ethereum === 'undefined') {
+        console.log('No hay provider de Ethereum disponible');
+        return;
+      }
+
+      try {
+        // Verificar si ya hay cuentas conectadas
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        
+        if (accounts && accounts.length > 0) {
+          console.log('Conexión existente detectada:', accounts[0]);
+          
+          // Determinar tipo de wallet
+          let walletType = 'generic';
+          if (window.ethereum.isMetaMask) walletType = 'metamask';
+          else if (window.ethereum.isRabby) walletType = 'rabby';
+          
+          // Intentar reconectar automáticamente
+          await connectSpecificWallet(walletType);
+        } else {
+          console.log('No hay conexiones existentes');
+        }
+      } catch (error) {
+        console.error('Error detectando conexión existente:', error);
+      }
+    };
+
+    detectExistingConnection();
+  }, []); // Solo ejecutar al montar el componente
+
+  // Función para configurar los listeners de eventos de la wallet
+  const setupWalletEventListeners = (ethereum, contractInstance) => {
+    // Remover listeners existentes para evitar duplicados
+    ethereum.removeAllListeners('accountsChanged');
+    ethereum.removeAllListeners('chainChanged');
+    ethereum.removeAllListeners('disconnect');
+
+    // Listener para cambio de cuentas
+    ethereum.on('accountsChanged', async (accounts) => {
+      console.log('Cuentas cambiadas:', accounts);
+      if (accounts.length === 0) {
+        console.log('Todas las cuentas desconectadas');
+        disconnectWallet();
+      } else {
+        console.log('Cambiando a cuenta:', accounts[0]);
+        setAccount(accounts[0]);
+        try {
+          await loadDashboardData(contractInstance, accounts[0]);
+        } catch (error) {
+          console.error('Error recargando datos tras cambio de cuenta:', error);
+          toast.error('Error recargando datos tras cambio de cuenta');
+        }
+      }
+    });
+
+    // Listener para cambio de red
+    ethereum.on('chainChanged', (chainId) => {
+      console.log('Red cambiada a:', chainId);
+      if (chainId !== '0x539') {
+        setNetworkError('Red incorrecta');
+        toast.error('Red incorrecta. Cambia a la red local de Hardhat (localhost:8545)');
+      } else {
+        setNetworkError('');
+        toast.success('Conectado a la red correcta');
+        // Recargar la página para asegurar una conexión limpia
+        window.location.reload();
+      }
+    });
+
+    // Listener para desconexión
+    ethereum.on('disconnect', (error) => {
+      console.log('Wallet desconectada:', error);
+      disconnectWallet();
+    });
+  };  // Función mejorada para desconectar wallet
+  const disconnectWallet = async () => {
     try {
+      console.log('Desconectando wallet...');
+      
+      // Limpiar listeners si existe ethereum
+      if (window.ethereum) {
+        window.ethereum.removeAllListeners('accountsChanged');
+        window.ethereum.removeAllListeners('chainChanged');
+        window.ethereum.removeAllListeners('disconnect');
+      }
+
+      // Resetear todos los estados
       setAccount('');
       setProvider(null);
       setSigner(null);
       setContract(null);
       setConnectedWalletType('');
+      setIsConnecting(false);
+      setNetworkError('');
+      setConnectionError('');
+      
+      // Resetear datos de la aplicación
       setBalance('0');
       setStaking({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
       setVotingPower('0');
       setTreasuryBalance('0');
       setProposals([]);
+      setIsOwner(false);
+      
+      // Resetear formularios
       setBuyAmount('');
       setStakeAmount('');
       setProposalTitle('');
       setProposalDescription('');
       setTreasuryTarget('');
       setTreasuryAmount('');
+      setPanicMultisigAddress('');
+      setMintToAddress('');
+      setMintAmount('');
+      setParameterName('');
+      setParameterValue('');
       setLoading(false);
+      
+      console.log('Wallet desconectada correctamente');
       toast.success('Wallet desconectada');
     } catch (error) {
+      console.error('Error al desconectar wallet:', error);
       toast.error('Error al desconectar wallet');
     }
-  };
-
+  };  // Función mejorada para cargar datos del dashboard
   const loadDashboardData = async (contractInstance, userAccount) => {
+    if (!contractInstance || !userAccount) {
+      console.error('loadDashboardData: Faltan parámetros');
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('Loading dashboard data for:', userAccount);
+      console.log('Contract address:', contractInstance.target);
       
-      const userBalance = await contractInstance.getTokenBalance(userAccount);
-      const userStaking = await contractInstance.getUserStaking(userAccount);
-      const userVotingPower = await contractInstance.getVotingPower(userAccount);
-      const treasury = await contractInstance.getTreasuryBalance();
+      // Verificar que el contrato esté disponible
+      const code = await contractInstance.runner.provider.getCode(contractInstance.target);
+      if (code === '0x') {
+        throw new Error('El contrato no está desplegado en esta dirección');
+      }
+
+      // Cargar balance de tokens del usuario
+      let userBalance;
+      try {
+        userBalance = await contractInstance.getTokenBalance(userAccount);
+        console.log('User balance (raw):', userBalance.toString());
+      } catch (error) {
+        console.error('Error obteniendo balance de usuario:', error);
+        throw new Error(`Error obteniendo balance: ${error.message}`);
+      }
       
+      // Cargar información de staking del usuario
+      let userStaking;
+      try {
+        userStaking = await contractInstance.getUserStaking(userAccount);
+        console.log('User staking:', userStaking);
+      } catch (error) {
+        console.error('Error obteniendo staking de usuario:', error);
+        throw new Error(`Error obteniendo staking: ${error.message}`);
+      }
+      
+      // Cargar poder de voto del usuario
+      let userVotingPower;
+      try {
+        userVotingPower = await contractInstance.getVotingPower(userAccount);
+        console.log('User voting power:', userVotingPower.toString());
+      } catch (error) {
+        console.error('Error obteniendo voting power:', error);
+        throw new Error(`Error obteniendo poder de voto: ${error.message}`);
+      }
+      
+      // Cargar balance del tesoro
+      let treasury;
+      try {
+        treasury = await contractInstance.getTreasuryBalance();
+        console.log('Treasury balance (raw):', treasury.toString());
+        console.log('Treasury balance (formatted):', ethers.formatEther(treasury));
+      } catch (error) {
+        console.error('Error obteniendo treasury balance:', error);
+        throw new Error(`Error obteniendo tesoro: ${error.message}`);
+      }
+      
+      // Actualizar estados con los datos obtenidos
       setBalance(ethers.formatEther(userBalance));
       setStaking({
         votingStake: ethers.formatEther(userStaking.votingStake),
@@ -230,10 +535,21 @@ function App() {
       setVotingPower(userVotingPower.toString());
       setTreasuryBalance(ethers.formatEther(treasury));
       
-      checkOwnership();
+      // Verificar si el usuario es owner
+      try {
+        await checkOwnership();
+      } catch (error) {
+        console.error('Error verificando ownership:', error);
+        // No es crítico, continuar sin error
+      }
+      
+      console.log('Dashboard data loaded successfully');
       
     } catch (error) {
-      toast.error(`Error al cargar datos: ${error.message}`);
+      console.error('Error en loadDashboardData:', error);
+      const errorMessage = error.message || 'Error desconocido al cargar datos';
+      toast.error(`Error al cargar datos: ${errorMessage}`);
+      setConnectionError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -250,8 +566,7 @@ function App() {
       for (let i = 0; i < proposalCount; i++) {
         const proposal = await contract.getProposal(i);
         const hasUserVoted = await contract.hasVoted(i, account);
-        
-        const mappedProposal = {
+          const mappedProposal = {
           id: proposal[0] || i,
           title: proposal[1] || '',
           description: proposal[2] || '',
@@ -261,12 +576,21 @@ function App() {
           startTime: proposal[6] || 0,
           endTime: proposal[7] || 0,
           state: proposal[8] || 0,
-          proposalType: proposal[9] || 0,
+          proposalType: Number(proposal[9]) || 0,
           treasuryTarget: proposal[10] || '',
           treasuryAmount: proposal[11] || 0,
           executed: proposal[12] || false,
           hasVoted: hasUserVoted
         };
+        
+        // Debug log para verificar datos de propuesta
+        console.log(`Propuesta ${i}:`, {
+          id: mappedProposal.id,
+          title: mappedProposal.title,
+          proposalType: mappedProposal.proposalType,
+          treasuryTarget: mappedProposal.treasuryTarget,
+          treasuryAmount: mappedProposal.treasuryAmount
+        });
         
         proposalsData.push(mappedProposal);
       }
@@ -277,57 +601,187 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [contract, account]);
+  }, [contract, account]);  // Función mejorada para comprar tokens
   const handleBuyTokens = async (e) => {
     e.preventDefault();
-    if (!contract || !buyAmount) return;
+    if (!contract || !buyAmount) {
+      toast.error('Debes ingresar una cantidad válida de ETH');
+      return;
+    }
     
     try {
       setLoading(true);
-      const tx = await contract.buyTokens({ value: ethers.parseEther(buyAmount) });
-      await tx.wait();
+      console.log(`Comprando tokens con ${buyAmount} ETH`);
       
-      toast.success('Tokens comprados exitosamente!');
+      // Verificar que el usuario tenga suficiente ETH
+      const userEthBalance = await provider.getBalance(account);
+      const requiredEth = ethers.parseEther(buyAmount);
+      
+      if (userEthBalance < requiredEth) {
+        throw new Error(`Balance de ETH insuficiente. Tienes ${ethers.formatEther(userEthBalance)} ETH`);
+      }      console.log('Enviando transacción de compra...');
+      const tx = await contract.buyTokens({ value: requiredEth });
+      console.log('Transacción enviada, hash:', tx.hash);
+      
+      // Usar toast.promise o fallback
+      let receipt;
+      if (typeof toast.promise === 'function') {
+        receipt = await toast.promise(
+          tx.wait(),
+          {
+            loading: 'Procesando compra de tokens...',
+            success: `Tokens comprados exitosamente con ${buyAmount} ETH!`,
+            error: 'Error confirmando la transacción'
+          }
+        );
+      } else {
+        receipt = await handleTransactionToast(
+          tx.wait(),
+          {
+            loading: 'Procesando compra de tokens...',
+            success: `Tokens comprados exitosamente con ${buyAmount} ETH!`,
+            error: 'Error confirmando la transacción'
+          }
+        );
+      }
+      console.log('Compra confirmada:', receipt);
+      
       setBuyAmount('');
-      loadDashboardData(contract, account);
+      
+      // Recargar datos
+      await loadDashboardData(contract, account);
+      
     } catch (error) {
-      toast.error('Error al comprar tokens');
+      console.error('Error en handleBuyTokens:', error);
+      
+      let errorMessage = 'Error al comprar tokens';
+      
+      if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Fondos de ETH insuficientes para la transacción';
+      } else if (error.message.includes('user rejected')) {
+        errorMessage = 'Transacción rechazada por el usuario';
+      } else if (error.message.includes('Balance de ETH insuficiente')) {
+        errorMessage = error.message;
+      } else if (error.reason) {
+        errorMessage = `Error del contrato: ${error.reason}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
-
+  // Función mejorada para stakear tokens
   const handleStakeTokens = async (e) => {
     e.preventDefault();
-    if (!contract || !stakeAmount) return;
+    if (!contract || !stakeAmount) {
+      toast.error('Debes ingresar una cantidad válida');
+      return;
+    }
     
     try {
       setLoading(true);
-      const tx = await contract.stakeTokens(ethers.parseEther(stakeAmount), stakeType);
-      await tx.wait();
+      console.log(`Iniciando staking de ${stakeAmount} tokens (tipo: ${stakeType ? 'voto' : 'propuesta'})`);
       
-      toast.success('Tokens stakeados exitosamente!');
+      // Validar que el usuario tenga suficientes tokens
+      const userBalance = await contract.getTokenBalance(account);
+      const requiredAmount = ethers.parseEther(stakeAmount);
+      
+      if (userBalance < requiredAmount) {
+        throw new Error(`Balance insuficiente. Tienes ${ethers.formatEther(userBalance)} tokens`);
+      }      console.log('Enviando transacción de staking...');
+      const tx = await contract.stakeTokens(requiredAmount, stakeType);
+      console.log('Transacción enviada, hash:', tx.hash);
+      
+      // Usar toast.promise para mejor UX
+      const receipt = await toast.promise(
+        tx.wait(),
+        {
+          loading: 'Procesando staking...',
+          success: `Tokens stakeados exitosamente! ${stakeType ? 'Para votar' : 'Para propuestas'}`,
+          error: 'Error confirmando el staking'
+        }
+      );
+      console.log('Transacción confirmada, receipt:', receipt);
+      
       setStakeAmount('');
-      loadDashboardData(contract, account);
+      
+      // Recargar datos
+      await loadDashboardData(contract, account);
+      
     } catch (error) {
-      toast.error('Error al stakear tokens');
+      console.error('Error en handleStakeTokens:', error);
+      
+      // Manejo específico de errores
+      let errorMessage = 'Error al stakear tokens';
+      
+      if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Fondos insuficientes para la transacción';
+      } else if (error.message.includes('user rejected')) {
+        errorMessage = 'Transacción rechazada por el usuario';
+      } else if (error.message.includes('Balance insuficiente')) {
+        errorMessage = error.message;
+      } else if (error.reason) {
+        errorMessage = `Error del contrato: ${error.reason}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Función mejorada para retirar tokens del staking
   const handleUnstake = async (amount, isVoting) => {
-    if (!contract) return;
+    if (!contract || !amount) {
+      toast.error('Cantidad inválida');
+      return;
+    }
     
     try {
       setLoading(true);
-      const tx = await contract.unstakeTokens(ethers.parseEther(amount), isVoting);
-      await tx.wait();
+      console.log(`Retirando ${amount} tokens del staking (${isVoting ? 'voting' : 'proposal'})`);
+        const tx = await contract.unstakeTokens(ethers.parseEther(amount), isVoting);
+      console.log('Transacción de unstake enviada:', tx.hash);
+      
+      // Usar toast.promise para mejor UX
+      const receipt = await toast.promise(
+        tx.wait(),
+        {
+          loading: 'Retirando tokens del staking...',
+          success: 'Tokens retirados exitosamente!',
+          error: 'Error confirmando el retiro'
+        }
+      );
+      console.log('Unstake confirmado:', receipt);
       
       toast.success('Tokens retirados exitosamente!');
-      loadDashboardData(contract, account);
+      
+      // Recargar datos
+      await loadDashboardData(contract, account);
+      
     } catch (error) {
-      toast.error('Error al retirar tokens');
+      console.error('Error en handleUnstake:', error);
+      
+      let errorMessage = 'Error al retirar tokens';
+      
+      if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Fondos insuficientes para la transacción';
+      } else if (error.message.includes('user rejected')) {
+        errorMessage = 'Transacción rechazada por el usuario';
+      } else if (error.message.includes('still locked')) {
+        errorMessage = 'Los tokens aún están bloqueados. Espera el tiempo mínimo.';
+      } else if (error.reason) {
+        errorMessage = `Error del contrato: ${error.reason}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -524,12 +978,11 @@ function App() {
       default: return 'Desconocido';
     }
   };
-
   const getProposalTypeText = (type) => {
-    switch (type) {
-      case 0: return 'Estándar';
-      case 1: return 'Tesorería';
-      default: return 'Desconocido';
+    switch (Number(type)) {
+      case 0: return 'Propuesta Estándar';
+      case 1: return 'Propuesta de Tesorería';
+      default: return `Tipo Desconocido (${type})`;
     }
   };
 
@@ -542,14 +995,140 @@ function App() {
       loadProposals();
     }
   }, [activeTab, contract, loadProposals]);
+  const debugConnection = async () => {
+    console.log('=== DEBUG CONNECTION ===');
+    console.log('Contract Address:', DAO_CONTRACT_ADDRESS);
+    
+    if (provider) {
+      try {
+        const network = await provider.getNetwork();
+        console.log('Network:', network);
+        console.log('Chain ID:', network.chainId);
+        
+        const blockNumber = await provider.getBlockNumber();
+        console.log('Block Number:', blockNumber);
+        
+        if (contract) {
+          const treasuryBalance = await contract.getTreasuryBalance();
+          console.log('Treasury Balance (raw):', treasuryBalance);
+          console.log('Treasury Balance (formatted):', ethers.formatEther(treasuryBalance));
+          
+          const totalSupply = await contract.totalSupply();
+          console.log('Total Supply:', ethers.formatEther(totalSupply));
+        }
+      } catch (error) {
+        console.error('Debug error:', error);
+      }
+    } else {
+      console.log('No provider available');
+    }
+    console.log('=== END DEBUG ===');
+  };
+
+  // Función de debugging para verificar datos de propuestas
+  const debugProposals = async () => {
+    if (!contract) {
+      console.log('No hay contrato disponible');
+      return;
+    }
+
+    try {
+      console.log('=== DEBUG PROPUESTAS ===');
+      const proposalCount = await contract.getProposalCount();
+      console.log('Total de propuestas:', proposalCount.toString());
+      
+      for (let i = 0; i < proposalCount; i++) {
+        const rawProposal = await contract.getProposal(i);
+        console.log(`\nPropuesta ${i} (raw data):`, rawProposal);
+        console.log(`Propuesta ${i} (parsed):`, {
+          id: rawProposal[0].toString(),
+          title: rawProposal[1],
+          description: rawProposal[2],
+          proposer: rawProposal[3],
+          forVotes: rawProposal[4].toString(),
+          againstVotes: rawProposal[5].toString(),
+          startTime: rawProposal[6].toString(),
+          endTime: rawProposal[7].toString(),
+          state: rawProposal[8].toString(),
+          proposalType: rawProposal[9].toString(),
+          treasuryTarget: rawProposal[10],
+          treasuryAmount: rawProposal[11].toString(),
+          executed: rawProposal[12]
+        });
+      }
+      console.log('=== FIN DEBUG ===');
+    } catch (error) {
+      console.error('Error en debug:', error);
+    }
+  };
+
+  // Helper function para manejar notificaciones de transacciones
+  const handleTransactionToast = async (txPromise, messages) => {
+    const loadingToast = toast.loading(messages.loading || 'Procesando transacción...');
+    
+    try {
+      const result = await txPromise;
+      toast.dismiss(loadingToast);
+      toast.success(messages.success || 'Transacción exitosa!');
+      return result;
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error(messages.error || 'Error en la transacción');
+      throw error;
+    }
+  };
+
   return (
     <div className="container">
       <Toaster position="top-right" />
-      
-      <div className="header">
+        <div className="header">
         <h1>🏛️ DAO Governance</h1>
         <p>Sistema de Gobernanza Descentralizada con Gestión de Tesorería</p>
       </div>
+
+      {/* Sección de notificaciones de estado */}
+      {(connectionError || networkError || isConnecting) && (
+        <div className="status-notifications">
+          {isConnecting && (
+            <div className="status-card connecting">
+              <div className="status-icon">⏳</div>
+              <div className="status-content">
+                <strong>Conectando wallet...</strong>
+                <small>Por favor espera mientras establecemos la conexión</small>
+              </div>
+            </div>
+          )}
+          
+          {networkError && (
+            <div className="status-card error">
+              <div className="status-icon">🚫</div>
+              <div className="status-content">
+                <strong>Error de Red</strong>
+                <small>{networkError} - Cambia a la red local de Hardhat (localhost:8545)</small>
+              </div>
+            </div>
+          )}
+          
+          {connectionError && (
+            <div className="status-card error">
+              <div className="status-icon">⚠️</div>
+              <div className="status-content">
+                <strong>Error de Conexión</strong>
+                <small>{connectionError}</small>
+              </div>
+              <button 
+                className="retry-button"
+                onClick={() => {
+                  setConnectionError('');
+                  setNetworkError('');
+                }}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="wallet-section">
         {!account ? (
@@ -858,17 +1437,21 @@ function App() {
               {filteredProposals.length === 0 ? (
                 <p>No hay propuestas disponibles.</p>
               ) : (
-                filteredProposals.map((proposal) => (
-                  <div key={proposal.id} className="proposal">
+                filteredProposals.map((proposal) => (                  <div key={proposal.id} className="proposal">
                     <div className="proposal-header">
                       <h3 className="proposal-title">{proposal.title || 'Propuesta sin título'}</h3>
-                      <span className={`proposal-status status-${proposal.state === 0 ? 'active' : proposal.state === 1 ? 'accepted' : 'rejected'}`}>
-                        {getProposalStateText(proposal.state)}
-                      </span>
+                      <div className="proposal-badges">
+                        <span className={`proposal-type-badge ${proposal.proposalType === 1 ? 'treasury-type' : 'standard-type'}`}>
+                          {proposal.proposalType === 1 ? '💰 TESORERÍA' : '📋 ESTÁNDAR'}
+                        </span>
+                        <span className={`proposal-status status-${proposal.state === 0 ? 'active' : proposal.state === 1 ? 'accepted' : 'rejected'}`}>
+                          {getProposalStateText(proposal.state)}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="proposal-meta">
-                      <span>Tipo: {getProposalTypeText(proposal.proposalType)}</span>
+                      <span>Tipo: {getProposalTypeText(proposal.proposalType)} (Código: {proposal.proposalType})</span>
                       <span>Propuesto por: {proposal.proposer ? `${proposal.proposer.slice(0, 6)}...${proposal.proposer.slice(-4)}` : 'N/A'}</span>
                       <span>Termina: {proposal.endTime ? new Date(Number(proposal.endTime) * 1000).toLocaleString() : 'Fecha no disponible'}</span>
                     </div>
@@ -877,11 +1460,23 @@ function App() {
                       {proposal.description || 'Sin descripción'}
                     </div>
 
-                    {proposal.proposalType === 1 && proposal.treasuryTarget && proposal.treasuryAmount && (
+                    {proposal.proposalType === 1 && (
                       <div className="proposal-treasury">
-                        <strong>💰 Propuesta de Tesorería:</strong>
-                        <p>Destino: {proposal.treasuryTarget}</p>
-                        <p>Cantidad: {ethers.formatEther(proposal.treasuryAmount)} ETH</p>
+                        <div className="treasury-header">
+                          <strong>💰 Detalles de Transferencia de Tesorería</strong>
+                        </div>
+                        <div className="treasury-details">
+                          <div className="treasury-row">
+                            <span className="treasury-label">Dirección de destino:</span>
+                            <span className="treasury-value">{proposal.treasuryTarget || 'No especificada'}</span>
+                          </div>
+                          <div className="treasury-row">
+                            <span className="treasury-label">Cantidad a transferir:</span>
+                            <span className="treasury-value">
+                              {proposal.treasuryAmount ? ethers.formatEther(proposal.treasuryAmount) : '0'} ETH
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                     
@@ -1001,9 +1596,11 @@ function App() {
                 
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   Crear Propuesta
-                </button>
-              </form>
-            </div>          )}          {activeTab === 'admin' && isOwner && (
+                </button>              </form>
+            </div>
+          )}
+
+          {activeTab === 'admin' && isOwner && (
             <div className="card">
               <h2>👑 Funciones de Administración</h2>
               <p style={{color: 'rgba(255,255,255,0.8)', marginBottom: '20px'}}>

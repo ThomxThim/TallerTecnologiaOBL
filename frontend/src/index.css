@@ -303,9 +303,11 @@ code {
 
 .proposal-header {
   display: flex;
-  justify-content: between;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .proposal-title {
@@ -949,13 +951,164 @@ code {
   box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
 }
 
+/* Estilos para notificaciones de estado */
+.status-notifications {
+  margin: 20px 0;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  margin: 10px 0;
+  border-radius: 10px;
+  border-left: 4px solid;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.status-card.connecting {
+  background: rgba(59, 130, 246, 0.1);
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.status-card.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: #ef4444;
+  color: #dc2626;
+}
+
+.status-icon {
+  font-size: 1.5rem;
+  margin-right: 15px;
+  min-width: 30px;
+}
+
+.status-content {
+  flex: 1;
+}
+
+.status-content strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.status-content small {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.retry-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 15px;
+  transition: background 0.3s ease;
+}
+
+.retry-button:hover {
+  background: #dc2626;
+}
+
+/* Estilos para badges de tipo de propuesta */
+.proposal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.proposal-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.proposal-type-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.proposal-type-badge.treasury-type {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border: 2px solid #d97706;
+}
+
+.proposal-type-badge.standard-type {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: 2px solid #1d4ed8;
+}
+
+/* Estilos mejorados para la sección de tesorería */
+.proposal-treasury {
+  background: linear-gradient(135deg, #fef3c7, #fed7aa);
+  border: 2px solid #f59e0b;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.treasury-header {
+  color: #92400e;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.treasury-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.treasury-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.treasury-label {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.treasury-value {
+  font-family: 'Monaco', 'Consolas', monospace;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
 @media (max-width: 768px) {
-  .admin-section {
-    padding: 15px;
-    margin: 15px 0;
+  .proposal-header {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .admin-section form {
-    gap: 8px;
+  .proposal-badges {
+    justify-content: flex-start;
+  }
+  
+  .treasury-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
   }
 }
