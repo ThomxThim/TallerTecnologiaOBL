@@ -1112,3 +1112,139 @@ code {
     gap: 5px;
   }
 }
+
+/* Estilos para la sección de parámetros mejorada */
+.parameters-display {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.parameters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.parameter-card {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.parameter-card:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #3b82f6;
+}
+
+.parameter-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.parameter-value {
+  font-size: 1rem;
+  color: #059669;
+  font-family: 'Monaco', 'Consolas', monospace;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.parameter-description {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.parameter-change-form {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e5e7eb;
+}
+
+.parameter-change-form h4 {
+  color: #1f2937;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.parameter-info {
+  margin: 15px 0;
+}
+
+.info-card {
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  padding: 15px;
+  border-radius: 8px;
+  color: white;
+  border: 2px solid #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.info-card .parameter-name {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.info-card .parameter-value {
+  color: #dbeafe;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.info-card .parameter-description {
+  color: #cbd5e1;
+}
+
+.info-card strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.info-card p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+}
+
+.info-card p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .parameters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .parameter-change-form {
+    padding: 15px;
+  }
+}

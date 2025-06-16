@@ -59,10 +59,56 @@ function App() {
   const [treasuryAmount, setTreasuryAmount] = useState('');
   const [panicMultisigAddress, setPanicMultisigAddress] = useState('');
   const [mintToAddress, setMintToAddress] = useState('');
-  const [mintAmount, setMintAmount] = useState('');
-  const [parameterName, setParameterName] = useState('');
+  const [mintAmount, setMintAmount] = useState('');  const [parameterName, setParameterName] = useState('');
   const [parameterValue, setParameterValue] = useState('');
   const [isOwner, setIsOwner] = useState(false);
+  const [selectedParameter, setSelectedParameter] = useState('');
+  const [currentParameters, setCurrentParameters] = useState({});  // Definición de parámetros de la DAO con sus nombres legibles
+  const daoParameters = {
+    'TOKEN_PRICE': {
+      name: 'Precio del Token',
+      description: 'Cuánto ETH cuesta comprar 1 token (ingresa en ETH, ej: 0.001)',
+      currentValue: '',
+      unit: 'ETH',
+      example: '0.001 (se convertirá automáticamente a WEI)'
+    },
+    'MIN_VOTING_STAKE': {
+      name: 'Tokens Mínimos para Votar',
+      description: 'Cantidad mínima de tokens que hay que stakear para poder votar (ingresa en tokens, ej: 1000)',
+      currentValue: '',
+      unit: 'Tokens',
+      example: '1000 (se convertirá automáticamente a unidades del contrato)'
+    },
+    'MIN_PROPOSAL_STAKE': {
+      name: 'Tokens Mínimos para Propuestas',
+      description: 'Cantidad mínima de tokens que hay que stakear para crear propuestas (ingresa en tokens, ej: 2000)',
+      currentValue: '',
+      unit: 'Tokens',
+      example: '2000 (se convertirá automáticamente a unidades del contrato)'
+    },
+    'STAKING_LOCK_TIME': {
+      name: 'Tiempo de Bloqueo de Staking',
+      description: 'Tiempo en segundos que los tokens quedan bloqueados después del staking',
+      currentValue: '',
+      unit: 'Segundos',
+      example: '300 (5 minutos)'
+    },
+    'VOTING_DURATION': {
+      name: 'Duración de Propuestas',
+      description: 'Tiempo en segundos que dura una propuesta activa',
+      currentValue: '',
+      unit: 'Segundos',
+      example: '604800 (7 días)'
+    },
+    'TOKENS_PER_VOTE': {
+      name: 'Tokens por Poder de Voto',
+      description: 'Cuántos tokens stakeados equivalen a 1 punto de poder de voto (ingresa en tokens, ej: 1000)',
+      currentValue: '',
+      unit: 'Tokens',
+      example: '1000 (se convertirá automáticamente a unidades del contrato)'
+    }
+  };
+
   // Función mejorada para detectar wallets disponibles
   const detectWallets = () => {
     const wallets = { metamask: false, rabby: false, generic: false };
@@ -291,20 +337,36 @@ function App() {
       } catch (contractError) {
         console.error('Error creando contrato:', contractError);
         toast.error(`Error creando contrato: ${contractError.message}`);
-        return;
-      }
+        return;      }
 
       // Verificar que el contrato esté desplegado
       try {
-        console.log('Verificando contrato...');
+        console.log('Verificando contrato en dirección:', DAO_CONTRACT_ADDRESS);
+        
+        // Verificar la red actual
+        const network = await provider.getNetwork();
+        console.log('Red actual:', network);        console.log('Chain ID:', network.chainId);
+        
+        // Verificar si estamos en la red correcta (1337 = Hardhat local)
+        // Convertir a número para manejar BigInt
+        const chainIdNumber = Number(network.chainId);
+        if (chainIdNumber !== 1337) {
+          console.warn('Red incorrecta. Esperado: 1337, Actual:', chainIdNumber);
+          toast.error('Por favor cambia a la red local de Hardhat (Chain ID: 1337)');
+          return;
+        }
+        
         const code = await provider.getCode(DAO_CONTRACT_ADDRESS);
+        console.log('Código del contrato (primeros 100 chars):', code.substring(0, 100));
+        console.log('Longitud del código:', code.length);
+        
         if (code === '0x') {
           throw new Error('El contrato no está desplegado en esta dirección');
         }
         console.log('Contrato verificado exitosamente');
       } catch (verifyError) {
         console.error('Error verificando contrato:', verifyError);
-        toast.error(`Error: ${verifyError.message}. ¿Está desplegado el contrato?`);
+        toast.error(`Error: ${verifyError.message}. ¿Está desplegado el contrato en la red local?`);
         return;
       }
 
@@ -924,22 +986,68 @@ function App() {
       setLoading(false);
     }
   };
-
+  // Función mejorada para cambiar parámetros usando el selector
   const handleSetParameter = async (e) => {
     e.preventDefault();
-    if (!contract || !parameterName || !parameterValue) return;
+    if (!contract || !selectedParameter || !parameterValue) {
+      toast.error('Selecciona un parámetro e ingresa un valor');
+      return;
+    }
     
     try {
       setLoading(true);
-      const paramBytes32 = ethers.encodeBytes32String(parameterName);
-      const tx = await contract.setParameter(paramBytes32, parameterValue);
+      console.log('Cambiando parámetro:', selectedParameter, 'a valor:', parameterValue);
+        // Convertir el nombre del parámetro a bytes32
+      const paramBytes32 = ethers.keccak256(ethers.toUtf8Bytes(selectedParameter));
+      
+      // Validar que el valor sea numérico
+      if (isNaN(parameterValue) || parameterValue <= 0) {
+        throw new Error('El valor debe ser un número positivo');
+      }
+      
+      // Convertir el valor según el tipo de parámetro
+      let convertedValue;
+      
+      if (selectedParameter === 'TOKEN_PRICE') {
+        // Para TOKEN_PRICE, convertir de ETH a WEI
+        convertedValue = ethers.parseEther(parameterValue.toString());
+        console.log(`Convirtiendo ${parameterValue} ETH a ${convertedValue} WEI`);      } else if (selectedParameter === 'MIN_VOTING_STAKE' || 
+                 selectedParameter === 'MIN_PROPOSAL_STAKE' || 
+                 selectedParameter === 'TOKENS_PER_VOTE') {
+        // Para parámetros de tokens, convertir a unidades de 18 decimales
+        convertedValue = ethers.parseEther(parameterValue.toString());
+        console.log(`Convirtiendo ${parameterValue} tokens a ${convertedValue} unidades (18 decimales)`);      } else {
+        // Para otros parámetros (tiempos, etc.), usar el valor directo como entero
+        convertedValue = ethers.getBigInt(Math.floor(Number(parameterValue)));
+        console.log(`Usando valor directo: ${convertedValue}`);
+      }
+      
+      const tx = await contract.setParameter(paramBytes32, convertedValue);
       await tx.wait();
       
-      toast.success(`Parámetro ${parameterName} configurado exitosamente!`);
-      setParameterName('');
+      const paramInfo = daoParameters[selectedParameter];
+      toast.success(`Parámetro "${paramInfo.name}" cambiado exitosamente!`);
+      
+      // Limpiar formulario
+      setSelectedParameter('');
       setParameterValue('');
+      
+      // Recargar parámetros para mostrar el nuevo valor
+      await loadCurrentParameters();
+      
     } catch (error) {
-      toast.error('Error al configurar parámetro');
+      console.error('Error configurando parámetro:', error);
+      let errorMessage = 'Error al configurar parámetro';
+      
+      if (error.message.includes('valor debe ser un número')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('user rejected')) {
+        errorMessage = 'Transacción rechazada por el usuario';
+      } else if (error.reason) {
+        errorMessage = `Error del contrato: ${error.reason}`;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -1120,6 +1228,69 @@ function App() {
       checkOwnership();
     }
   }, [contract, account]);
+
+  // Función para cargar los valores actuales de los parámetros
+  const loadCurrentParameters = async () => {
+    if (!contract) return;
+    
+    try {
+      setLoading(true);
+      const updatedParameters = { ...currentParameters };
+      
+      for (const [key, param] of Object.entries(daoParameters)) {
+        try {
+          // Convertir el nombre del parámetro a bytes32
+          const paramBytes32 = ethers.keccak256(ethers.toUtf8Bytes(key));
+          const value = await contract.getParameter(paramBytes32);
+            // Formatear el valor según el tipo de parámetro
+          let formattedValue = value.toString();
+          if (key === 'TOKEN_PRICE') {
+            const ethValue = ethers.formatEther(value);
+            formattedValue = `${ethValue} ETH`;
+          } else if (key === 'MIN_VOTING_STAKE' || key === 'MIN_PROPOSAL_STAKE' || key === 'TOKENS_PER_VOTE') {
+            const tokenValue = ethers.formatEther(value);
+            formattedValue = `${tokenValue} tokens`;
+          } else if (key.includes('TIME') || key.includes('DURATION')) {
+            const seconds = Number(value);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            formattedValue = `${seconds}s`;
+            if (days > 0) formattedValue += ` (${days} días)`;
+            else if (hours > 0) formattedValue += ` (${hours} horas)`;
+            else if (minutes > 0) formattedValue += ` (${minutes} minutos)`;
+          }
+          
+          updatedParameters[key] = {
+            ...param,
+            currentValue: formattedValue,
+            rawValue: value.toString()
+          };
+        } catch (error) {
+          console.error(`Error cargando parámetro ${key}:`, error);
+          updatedParameters[key] = {
+            ...param,
+            currentValue: 'Error al cargar',
+            rawValue: '0'
+          };
+        }
+      }
+      
+      setCurrentParameters(updatedParameters);
+    } catch (error) {
+      console.error('Error cargando parámetros:', error);
+      toast.error('Error cargando parámetros de la DAO');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Effect para cargar parámetros cuando se conecte el contrato
+  useEffect(() => {
+    if (contract && isOwner) {
+      loadCurrentParameters();
+    }
+  }, [contract, isOwner]);
 
   return (
     <div className="container">
@@ -1705,32 +1876,100 @@ function App() {
                     Mint Tokens
                   </button>
                 </form>
-              </div>
-
-              <div className="admin-section">
-                <h3>⚙️ Cambiar Parámetros</h3>
-                <form onSubmit={handleSetParameter}>
-                  <input
-                    type="text"
-                    placeholder="Nombre del parámetro (ej: TOKEN_PRICE)"
-                    value={parameterName}
-                    onChange={(e) => setParameterName(e.target.value)}
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nuevo valor"
-                    value={parameterValue}
-                    onChange={(e) => setParameterValue(e.target.value)}
-                    required
-                  />
-                  <button type="submit" className="btn btn-primary" disabled={loading}>
-                    Set Parameter
+              </div>              <div className="admin-section">
+                <h3>⚙️ Parámetros de la DAO</h3>
+                
+                {/* Mostrar parámetros actuales */}
+                <div className="parameters-display">
+                  <h4>📊 Valores Actuales:</h4>
+                  <button 
+                    onClick={loadCurrentParameters} 
+                    className="btn btn-secondary"
+                    disabled={loading}
+                    style={{marginBottom: '15px'}}
+                  >
+                    🔄 Recargar Parámetros
                   </button>
-                </form>
-                <small style={{color: 'rgba(255,255,255,0.6)', marginTop: '10px', display: 'block'}}>
-                  Parámetros disponibles: TOKEN_PRICE, VOTING_DURATION, STAKING_LOCK_TIME
-                </small>
+                  
+                  <div className="parameters-grid">
+                    {Object.entries(currentParameters).map(([key, param]) => (
+                      <div key={key} className="parameter-card">
+                        <div className="parameter-name">{param.name}</div>
+                        <div className="parameter-value">{param.currentValue || 'Cargando...'}</div>
+                        <div className="parameter-description">{param.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Formulario para cambiar parámetros */}
+                <div className="parameter-change-form">
+                  <h4>✏️ Cambiar Parámetro:</h4>
+                  <form onSubmit={handleSetParameter}>
+                    <div className="form-group">
+                      <label>Seleccionar Parámetro:</label>
+                      <select
+                        value={selectedParameter}
+                        onChange={(e) => setSelectedParameter(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          marginBottom: '10px',
+                          borderRadius: '5px',
+                          border: '1px solid #ddd'
+                        }}
+                      >
+                        <option value="">-- Selecciona un parámetro --</option>
+                        {Object.entries(daoParameters).map(([key, param]) => (
+                          <option key={key} value={key}>
+                            {param.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {selectedParameter && (
+                      <div className="parameter-info">
+                        <div className="info-card">
+                          <strong>📝 {daoParameters[selectedParameter].name}</strong>
+                          <p>{daoParameters[selectedParameter].description}</p>
+                          <p><strong>Unidad:</strong> {daoParameters[selectedParameter].unit}</p>
+                          <p><strong>Ejemplo:</strong> {daoParameters[selectedParameter].example}</p>
+                          {currentParameters[selectedParameter] && (
+                            <p><strong>Valor actual:</strong> {currentParameters[selectedParameter].currentValue}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label>Nuevo Valor:</label>
+                      <input
+                        type="text"
+                        placeholder="Ingresa el nuevo valor (en la unidad base)"
+                        value={parameterValue}
+                        onChange={(e) => setParameterValue(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          marginBottom: '10px',
+                          borderRadius: '5px',
+                          border: '1px solid #ddd'
+                        }}
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary" 
+                      disabled={loading || !selectedParameter}
+                    >
+                      {loading ? 'Cambiando...' : 'Cambiar Parámetro'}
+                    </button>
+                  </form>
+                </div>
               </div>
 
               <div className="admin-section">
