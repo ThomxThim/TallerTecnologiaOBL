@@ -1248,3 +1248,109 @@ code {
     padding: 15px;
   }
 }
+
+/* Estilos para conversiones de ETH/Tokens */
+.stat-conversion {
+  font-size: 0.8rem;
+  color: #1f2937;
+  margin-top: 4px;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.conversion-text {
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.conversion-info {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.conversion-info p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+
+.conversion-info strong {
+  color: #374151;
+}
+
+.conversion-highlight {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.dual-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dual-value .primary-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dual-value .secondary-value {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Mejoras responsive para conversiones */
+@media (max-width: 768px) {
+  .conversion-info {
+    padding: 12px;
+  }
+  
+  .conversion-info p {
+    font-size: 0.9rem;
+  }
+  
+  .stat-conversion {
+    font-size: 0.75rem;
+  }
+}
+
+/* Estilos para balances en wallet info */
+.wallet-balances {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.balance-item {
+  font-size: 0.85rem;
+  color: #4b5563;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .wallet-balances {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  
+  .balance-item {
+    font-size: 0.8rem;
+    padding: 1px 6px;
+  }
+}

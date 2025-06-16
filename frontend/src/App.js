@@ -32,6 +32,37 @@ const DAO_ABI = [
 
 const DAO_CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
+// Funciones de conversión entre ETH y Tokens
+const getTokenPrice = async (contractInstance) => {
+  try {
+    if (!contractInstance) return null;
+    const tokenPriceBytes32 = ethers.keccak256(ethers.toUtf8Bytes('TOKEN_PRICE'));
+    const tokenPriceWei = await contractInstance.getParameter(tokenPriceBytes32);
+    return ethers.formatEther(tokenPriceWei); // Convierte de WEI a ETH
+  } catch (error) {
+    console.error('Error obteniendo precio del token:', error);
+    return 0.001; // Valor por defecto
+  }
+};
+
+const convertEthToTokens = (ethAmount, tokenPrice) => {
+  if (!ethAmount || !tokenPrice || tokenPrice <= 0) return 0;
+  return parseFloat(ethAmount) / parseFloat(tokenPrice);
+};
+
+const convertTokensToEth = (tokenAmount, tokenPrice) => {
+  if (!tokenAmount || !tokenPrice || tokenPrice <= 0) return 0;
+  return parseFloat(tokenAmount) * parseFloat(tokenPrice);
+};
+
+const formatDualValue = (ethValue, tokenValue, isEthPrimary = true) => {
+  if (isEthPrimary) {
+    return `${parseFloat(ethValue).toFixed(4)} ETH (≈ ${parseFloat(tokenValue).toFixed(2)} tokens)`;
+  } else {
+    return `${parseFloat(tokenValue).toFixed(2)} tokens (≈ ${parseFloat(ethValue).toFixed(4)} ETH)`;
+  }
+};
+
 function App() {
   const [account, setAccount] = useState('');
   const [provider, setProvider] = useState(null);
@@ -42,12 +73,13 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [networkError, setNetworkError] = useState('');
   const [connectionError, setConnectionError] = useState('');
-  
   const [balance, setBalance] = useState('0');
+  const [ethBalance, setEthBalance] = useState('0'); // Balance de ETH de la cuenta
   const [staking, setStaking] = useState({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
   const [votingPower, setVotingPower] = useState('0');
   const [treasuryBalance, setTreasuryBalance] = useState('0');
   const [proposals, setProposals] = useState([]);
+  const [tokenPrice, setTokenPrice] = useState('0.001'); // Precio del token en ETH
   const [proposalFilter, setProposalFilter] = useState('all');
   const [buyAmount, setBuyAmount] = useState('');
   const [stakeAmount, setStakeAmount] = useState('');
@@ -506,13 +538,13 @@ function App() {
       setConnectedWalletType('');
       setIsConnecting(false);
       setNetworkError('');
-      setConnectionError('');
-      
-      // Resetear datos de la aplicación
+      setConnectionError('');      // Resetear datos de la aplicación
       setBalance('0');
+      setEthBalance('0');
       setStaking({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
       setVotingPower('0');
       setTreasuryBalance('0');
+      setTokenPrice('0.001');
       setProposals([]);
       setIsOwner(false);
       
@@ -583,8 +615,7 @@ function App() {
         console.error('Error obteniendo voting power:', error);
         throw new Error(`Error obteniendo poder de voto: ${error.message}`);
       }
-      
-      // Cargar balance del tesoro
+        // Cargar balance del tesoro
       let treasury;
       try {
         treasury = await contractInstance.getTreasuryBalance();
@@ -594,9 +625,28 @@ function App() {
         console.error('Error obteniendo treasury balance:', error);
         throw new Error(`Error obteniendo tesoro: ${error.message}`);
       }
+        // Cargar precio del token
+      let currentTokenPrice;
+      try {
+        currentTokenPrice = await getTokenPrice(contractInstance);
+        console.log('Token price:', currentTokenPrice);
+      } catch (error) {
+        console.error('Error obteniendo precio del token:', error);
+        currentTokenPrice = '0.001'; // Valor por defecto
+      }
       
-      // Actualizar estados con los datos obtenidos
+      // Cargar balance de ETH del usuario
+      let userEthBalance;
+      try {
+        userEthBalance = await contractInstance.runner.provider.getBalance(userAccount);
+        console.log('User ETH balance (raw):', userEthBalance.toString());
+        console.log('User ETH balance (formatted):', ethers.formatEther(userEthBalance));
+      } catch (error) {
+        console.error('Error obteniendo balance de ETH:', error);
+        userEthBalance = '0';
+      }      // Actualizar estados con los datos obtenidos
       setBalance(ethers.formatEther(userBalance));
+      setEthBalance(ethers.formatEther(userEthBalance));
       setStaking({
         votingStake: ethers.formatEther(userStaking.votingStake),
         proposalStake: ethers.formatEther(userStaking.proposalStake),
@@ -605,6 +655,7 @@ function App() {
       });
       setVotingPower(userVotingPower.toString());
       setTreasuryBalance(ethers.formatEther(treasury));
+      setTokenPrice(currentTokenPrice);
       
       // Verificar si el usuario es owner
       try {
@@ -1444,14 +1495,17 @@ function App() {
                 {connectedWalletType === 'metamask' && '🦊'}
                 {connectedWalletType === 'rabby' && '🐰'}
                 {connectedWalletType === 'generic' && '💼'}
-              </div>
-              <div className="wallet-text">
+              </div>              <div className="wallet-text">
                 <strong>
                   {connectedWalletType === 'metamask' && 'MetaMask'}
                   {connectedWalletType === 'rabby' && 'Rabby Wallet'}
                   {connectedWalletType === 'generic' && 'Wallet Conectada'}
                 </strong>
                 <span className="wallet-address">{account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'N/A'}</span>
+                <div className="wallet-balances">
+                  <span className="balance-item">💰 {parseFloat(ethBalance).toFixed(4)} ETH</span>
+                  <span className="balance-item">🪙 {parseFloat(balance).toFixed(2)} tokens</span>
+                </div>
               </div>
             </div>
             <button className="disconnect-button" onClick={disconnectWallet}>
@@ -1522,34 +1576,44 @@ function App() {
             </div>
           )}
 
-          {loading && <div className="loading">Cargando...</div>}{activeTab === 'dashboard' && (
+          {loading && <div className="loading">Cargando...</div>}          {activeTab === 'dashboard' && (
             <div className="card">
-              <h2>📊 Dashboard</h2>
-              <div className="stats-grid">
+              <h2>📊 Dashboard</h2>              <div className="stats-grid">
                 <div className="stat-card">
-                  <div className="stat-value">{parseFloat(balance).toFixed(2)}</div>
+                  <div className="stat-value">{parseFloat(ethBalance).toFixed(4)} ETH</div>
+                  <div className="stat-conversion">≈ {convertEthToTokens(ethBalance, tokenPrice).toFixed(2)} tokens</div>
+                  <div className="stat-label">Balance de ETH</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{parseFloat(balance).toFixed(2)} tokens</div>
+                  <div className="stat-conversion">≈ {convertTokensToEth(balance, tokenPrice).toFixed(4)} ETH</div>
                   <div className="stat-label">Tokens Disponibles</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{parseFloat(staking.votingStake).toFixed(2)}</div>
+                  <div className="stat-value">{parseFloat(staking.votingStake).toFixed(2)} tokens</div>
+                  <div className="stat-conversion">≈ {convertTokensToEth(staking.votingStake, tokenPrice).toFixed(4)} ETH</div>
                   <div className="stat-label">Tokens Stakeados (Voto)</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{parseFloat(staking.proposalStake).toFixed(2)}</div>
+                  <div className="stat-value">{parseFloat(staking.proposalStake).toFixed(2)} tokens</div>
+                  <div className="stat-conversion">≈ {convertTokensToEth(staking.proposalStake, tokenPrice).toFixed(4)} ETH</div>
                   <div className="stat-label">Tokens Stakeados (Propuestas)</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-value">{votingPower}</div>
+                  <div className="stat-value">{votingPower} votos</div>
+                  <div className="stat-conversion">Precio actual: {parseFloat(tokenPrice).toFixed(4)} ETH/token</div>
                   <div className="stat-label">Poder de Voto</div>
                 </div>
               </div>
-              
-              <div className="stake-section">
+                <div className="stake-section">
                 <h3>💰 Información de Staking</h3>
                 <div className="stake-info">
                   <div className="stake-item">
                     <h4>Staking para Voto</h4>
-                    <p>{parseFloat(staking.votingStake).toFixed(2)} tokens</p>
+                    <p>
+                      {parseFloat(staking.votingStake).toFixed(2)} tokens
+                      <span className="conversion-text"> (≈ {convertTokensToEth(staking.votingStake, tokenPrice).toFixed(4)} ETH)</span>
+                    </p>
                     {parseFloat(staking.votingStake) > 0 && (
                       <button 
                         className="btn btn-danger"
@@ -1562,7 +1626,10 @@ function App() {
                   </div>
                   <div className="stake-item">
                     <h4>Staking para Propuestas</h4>
-                    <p>{parseFloat(staking.proposalStake).toFixed(2)} tokens</p>
+                    <p>
+                      {parseFloat(staking.proposalStake).toFixed(2)} tokens
+                      <span className="conversion-text"> (≈ {convertTokensToEth(staking.proposalStake, tokenPrice).toFixed(4)} ETH)</span>
+                    </p>
                     {parseFloat(staking.proposalStake) > 0 && (
                       <button 
                         className="btn btn-danger"
@@ -1574,19 +1641,18 @@ function App() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              <div className="card">
+              </div>              <div className="card">
                 <h3>🏦 Tesorería de la DAO</h3>
                 <div className="stat-card">
                   <div className="stat-value">{parseFloat(treasuryBalance).toFixed(4)} ETH</div>
+                  <div className="stat-conversion">≈ {convertEthToTokens(treasuryBalance, tokenPrice).toFixed(2)} tokens al precio actual</div>
                   <div className="stat-label">Balance de Tesorería</div>
                 </div>
-              </div>
-
-              <div className="account-info">
+              </div>              <div className="account-info">
                 <h3>👤 Información de Cuenta</h3>
                 <p><strong>Cuenta Conectada:</strong> <code>{account}</code></p>
+                <p><strong>Balance ETH:</strong> {parseFloat(ethBalance).toFixed(4)} ETH</p>
+                <p><strong>Balance Tokens:</strong> {parseFloat(balance).toFixed(2)} tokens</p>
                 <p><strong>Red:</strong> Hardhat Local (Chain ID: 1337)</p>
                 <p><strong>Contrato:</strong> <code>{DAO_CONTRACT_ADDRESS}</code></p>
               </div>
@@ -1594,6 +1660,12 @@ function App() {
           )}          {activeTab === 'buy' && (
             <div className="card">
               <h2>💰 Comprar Tokens</h2>
+              <div className="conversion-info">
+                <p><strong>Precio actual:</strong> {parseFloat(tokenPrice).toFixed(4)} ETH por token</p>
+                {buyAmount && (
+                  <p><strong>Recibirás:</strong> ≈ {convertEthToTokens(buyAmount, tokenPrice).toFixed(2)} tokens por {buyAmount} ETH</p>
+                )}
+              </div>
               <form onSubmit={handleBuyTokens}>
                 <div className="form-group">
                   <label>Cantidad de ETH a invertir:</label>
@@ -1615,6 +1687,12 @@ function App() {
           )}          {activeTab === 'stake' && (
             <div className="card">
               <h2>🔒 Stakear Tokens</h2>
+              <div className="conversion-info">
+                <p><strong>Balance disponible:</strong> {parseFloat(balance).toFixed(2)} tokens (≈ {convertTokensToEth(balance, tokenPrice).toFixed(4)} ETH)</p>
+                {stakeAmount && (
+                  <p><strong>Valor a stakear:</strong> {stakeAmount} tokens (≈ {convertTokensToEth(stakeAmount, tokenPrice).toFixed(4)} ETH)</p>
+                )}
+              </div>
               <form onSubmit={handleStakeTokens}>
                 <div className="form-group">
                   <label>Cantidad de tokens a stakear:</label>
@@ -1644,7 +1722,7 @@ function App() {
                 </button>
               </form>
             </div>
-          )}          {activeTab === 'proposals' && (
+          )}{activeTab === 'proposals' && (
             <div className="card">
               <h2>📋 Propuestas</h2>
               
@@ -1699,9 +1777,7 @@ function App() {
                     
                     <div className="proposal-description">
                       {proposal.description || 'Sin descripción'}
-                    </div>
-
-                    {proposal.proposalType === 1 && (
+                    </div>                    {proposal.proposalType === 1 && (
                       <div className="proposal-treasury">
                         <div className="treasury-header">
                           <strong>💰 Detalles de Transferencia de Tesorería</strong>
@@ -1715,6 +1791,9 @@ function App() {
                             <span className="treasury-label">Cantidad a transferir:</span>
                             <span className="treasury-value">
                               {proposal.treasuryAmount ? ethers.formatEther(proposal.treasuryAmount) : '0'} ETH
+                              <span className="conversion-text">
+                                {proposal.treasuryAmount && ` (≈ ${convertEthToTokens(ethers.formatEther(proposal.treasuryAmount), tokenPrice).toFixed(2)} tokens)`}
+                              </span>
                             </span>
                           </div>
                         </div>
@@ -1804,10 +1883,14 @@ function App() {
                     placeholder="Descripción detallada de la propuesta"
                     required
                   />
-                </div>
-
-                {proposalType === 'treasury' && (
+                </div>                {proposalType === 'treasury' && (
                   <>
+                    <div className="conversion-info">
+                      <p><strong>Balance actual de tesorería:</strong> {parseFloat(treasuryBalance).toFixed(4)} ETH</p>
+                      {treasuryAmount && (
+                        <p><strong>Solicitando:</strong> {treasuryAmount} ETH (≈ {convertEthToTokens(treasuryAmount, tokenPrice).toFixed(2)} tokens al precio actual)</p>
+                      )}
+                    </div>
                     <div className="form-group">
                       <label>Dirección de destino:</label>
                       <input
