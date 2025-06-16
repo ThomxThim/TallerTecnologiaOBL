@@ -23,8 +23,11 @@ const DAO_ABI = [
   "function mintTokens(address to, uint256 amount) external",
   "function setParameter(bytes32 param, uint256 value) external",
   "function setPanicMultisig(address _panicMultisig) external",
+  "function transferOwnership(address newOwner) external",
   "function panic() external",
   "function tranquility() external",
+  "function panicMultisig() external view returns (address)",
+  "function isPanicMode() external view returns (bool)",
   "event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string title, uint8 proposalType)",
   "event VoteCast(uint256 indexed proposalId, address indexed voter, bool support, uint256 votingPower)",
   "event ProposalExecuted(uint256 indexed proposalId, uint8 result)"
@@ -89,13 +92,15 @@ function App() {
   const [proposalType, setProposalType] = useState('standard');
   const [treasuryTarget, setTreasuryTarget] = useState('');
   const [treasuryAmount, setTreasuryAmount] = useState('');
-  const [panicMultisigAddress, setPanicMultisigAddress] = useState('');
-  const [mintToAddress, setMintToAddress] = useState('');
+  const [panicMultisigAddress, setPanicMultisigAddress] = useState('');  const [mintToAddress, setMintToAddress] = useState('');
   const [mintAmount, setMintAmount] = useState('');  const [parameterName, setParameterName] = useState('');
   const [parameterValue, setParameterValue] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [selectedParameter, setSelectedParameter] = useState('');
-  const [currentParameters, setCurrentParameters] = useState({});  // Definición de parámetros de la DAO con sus nombres legibles
+  const [currentParameters, setCurrentParameters] = useState({});  // Estados para nuevas funciones admin
+  const [newOwnerAddress, setNewOwnerAddress] = useState('');
+  const [isPanicMultisig, setIsPanicMultisig] = useState(false);
+  const [panicModeActive, setPanicModeActive] = useState(false);// Definición de parámetros de la DAO con sus nombres legibles
   const daoParameters = {
     'TOKEN_PRICE': {
       name: 'Precio del Token',
@@ -542,11 +547,12 @@ function App() {
       setBalance('0');
       setEthBalance('0');
       setStaking({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
-      setVotingPower('0');
-      setTreasuryBalance('0');
+      setVotingPower('0');      setTreasuryBalance('0');
       setTokenPrice('0.001');
       setProposals([]);
       setIsOwner(false);
+      setIsPanicMultisig(false);
+      setPanicModeActive(false);
       
       // Resetear formularios
       setBuyAmount('');
@@ -656,12 +662,27 @@ function App() {
       setVotingPower(userVotingPower.toString());
       setTreasuryBalance(ethers.formatEther(treasury));
       setTokenPrice(currentTokenPrice);
-      
-      // Verificar si el usuario es owner
+        // Verificar si el usuario es owner
       try {
         await checkOwnership();
+          // Verificar directamente panic multisig aquí
+        const panicMultisigAddress = await contractInstance.panicMultisig();
+        const isPanic = userAccount.toLowerCase() === panicMultisigAddress.toLowerCase();
+        setIsPanicMultisig(isPanic);
+        console.log('=== PANIC MULTISIG CHECK ===');
+        console.log('User account:', userAccount);
+        console.log('Panic multisig address:', panicMultisigAddress);
+        console.log('User is panic multisig:', isPanic);
+        
+        // Verificar directamente panic mode aquí
+        const panicMode = await contractInstance.isPanicMode();
+        setPanicModeActive(panicMode);
+        console.log('=== PANIC MODE CHECK ===');
+        console.log('Panic mode from contract:', panicMode);
+        console.log('Setting panicModeActive to:', panicMode);
+        
       } catch (error) {
-        console.error('Error verificando ownership:', error);
+        console.error('Error verificando ownership/panic:', error);
         // No es crítico, continuar sin error
       }
       
@@ -995,9 +1016,7 @@ function App() {
       console.log('checkOwnership: Cuenta actual:', account);
       
       const isCurrentUserOwner = owner.toLowerCase() === account.toLowerCase();
-      console.log('checkOwnership: ¿Es owner?', isCurrentUserOwner);
-      
-      setIsOwner(isCurrentUserOwner);
+      console.log('checkOwnership: ¿Es owner?', isCurrentUserOwner);      setIsOwner(isCurrentUserOwner);
       
       if (isCurrentUserOwner) {
         console.log('✅ Usuario confirmado como owner del contrato');
@@ -1112,17 +1131,23 @@ function App() {
       setLoading(false);
     }
   };
-
   const handlePanic = async () => {
     if (!contract) return;
     
     try {
       setLoading(true);
+      console.log('Activando modo pánico...');
       const tx = await contract.panic();
       await tx.wait();
       
+      // Forzar actualización del estado después de la transacción
+      const newPanicMode = await contract.isPanicMode();
+      setPanicModeActive(newPanicMode);
+      console.log('Pánico activado, nuevo estado:', newPanicMode);
+      
       toast.success('Modo pánico activado!');
     } catch (error) {
+      console.error('Error al activar pánico:', error);
       toast.error('Error al activar pánico');
     } finally {
       setLoading(false);
@@ -1134,17 +1159,96 @@ function App() {
     
     try {
       setLoading(true);
+      console.log('Activando tranquilidad...');
       const tx = await contract.tranquility();
       await tx.wait();
       
+      // Forzar actualización del estado después de la transacción
+      const newPanicMode = await contract.isPanicMode();
+      setPanicModeActive(newPanicMode);
+      console.log('Tranquilidad activada, nuevo estado:', newPanicMode);
+      
       toast.success('Modo tranquilidad activado!');
     } catch (error) {
+      console.error('Error al activar tranquilidad:', error);
       toast.error('Error al activar tranquilidad');
     } finally {
       setLoading(false);
     }
   };
 
+  // Nueva función para transferir ownership
+  const handleTransferOwnership = async (e) => {
+    e.preventDefault();
+    if (!contract || !newOwnerAddress) {
+      toast.error('Ingresa una dirección válida');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Transfiriendo ownership a:', newOwnerAddress);
+      
+      // Validar que sea una dirección válida
+      if (!ethers.isAddress(newOwnerAddress)) {
+        throw new Error('Dirección inválida');
+      }
+      
+      const tx = await contract.transferOwnership(newOwnerAddress);
+      await tx.wait();
+      
+      toast.success('Ownership transferido exitosamente!');
+      setNewOwnerAddress('');
+      
+      // Recargar datos para actualizar isOwner
+      await loadDashboardData(contract, account);
+      
+    } catch (error) {
+      console.error('Error transfiriendo ownership:', error);
+      let errorMessage = 'Error al transferir ownership';
+      
+      if (error.message.includes('Dirección inválida')) {
+        errorMessage = 'Dirección inválida';
+      } else if (error.message.includes('user rejected')) {
+        errorMessage = 'Transacción rechazada por el usuario';
+      } else if (error.reason) {
+        errorMessage = `Error del contrato: ${error.reason}`;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para verificar si el usuario es la panic multisig
+  const checkPanicMultisig = async () => {
+    if (!contract || !account) return;
+    
+    try {
+      const panicMultisigAddress = await contract.panicMultisig();
+      const isPanic = account.toLowerCase() === panicMultisigAddress.toLowerCase();
+      setIsPanicMultisig(isPanic);
+      console.log('Is panic multisig:', isPanic);
+    } catch (error) {
+      console.error('Error verificando panic multisig:', error);
+      setIsPanicMultisig(false);
+    }
+  };
+
+  // Función para verificar estado de pánico
+  const checkPanicMode = async () => {
+    if (!contract) return;
+    
+    try {
+      const panicMode = await contract.isPanicMode();
+      setPanicModeActive(panicMode);
+      console.log('Panic mode active:', panicMode);
+    } catch (error) {
+      console.error('Error verificando panic mode:', error);
+      setPanicModeActive(false);
+    }
+  };
   const filteredProposals = proposals.filter(proposal => {
     if (proposalFilter === 'all') return true;
     if (proposalFilter === 'active') return proposal.state === 0;
@@ -1351,6 +1455,32 @@ function App() {
       loadCurrentParameters();
     }
   }, [contract, isOwner]);
+
+  // Effect para actualizar estados cuando cambia la cuenta o contrato
+  useEffect(() => {
+    const updateStates = async () => {
+      if (contract && account) {
+        console.log('=== USEEFFECT: ACTUALIZANDO ESTADOS ===');
+        try {
+          // Verificar panic mode
+          const panicMode = await contract.isPanicMode();
+          console.log('UseEffect - Panic mode:', panicMode);
+          setPanicModeActive(panicMode);
+          
+          // Verificar panic multisig
+          const panicMultisigAddress = await contract.panicMultisig();
+          const isPanic = account.toLowerCase() === panicMultisigAddress.toLowerCase();
+          console.log('UseEffect - Is panic multisig:', isPanic);
+          setIsPanicMultisig(isPanic);
+          
+        } catch (error) {
+          console.error('Error en useEffect actualizando estados:', error);
+        }
+      }
+    };
+    
+    updateStates();
+  }, [contract, account]); // Se ejecuta cuando cambia contract o account
 
   return (
     <div className="container">
@@ -1566,17 +1696,92 @@ function App() {
               </button>
               <button onClick={debugProposals} style={{margin: '5px', padding: '5px 10px', background: '#10b981', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
                 Debug Propuestas
-              </button>
-              <button onClick={() => checkOwnership()} style={{margin: '5px', padding: '5px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+              </button>              <button onClick={() => checkOwnership()} style={{margin: '5px', padding: '5px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
                 Re-check Owner
+              </button>              <button onClick={async () => {
+                console.log('=== PANIC MULTISIG DEBUG ===');
+                console.log('Account:', account);
+                if (contract) {
+                  try {
+                    const panicAddr = await contract.panicMultisig();
+                    const panicMode = await contract.isPanicMode();
+                    console.log('Panic Multisig Address:', panicAddr);
+                    console.log('Current Account:', account);
+                    console.log('Is Same?', account.toLowerCase() === panicAddr.toLowerCase());
+                    console.log('Panic Mode from contract:', panicMode);
+                    console.log('isPanicMultisig state:', isPanicMultisig);
+                    console.log('panicModeActive state:', panicModeActive);
+                    
+                    // Forzar actualización
+                    setIsPanicMultisig(account.toLowerCase() === panicAddr.toLowerCase());
+                    setPanicModeActive(panicMode);
+                    
+                    console.log('=== ESTADOS ACTUALIZADOS ===');
+                  } catch (error) {
+                    console.error('Error en debug:', error);
+                  }
+                }
+              }} style={{margin: '5px', padding: '5px 10px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+                Debug Panic
+              </button>              <button onClick={async () => {
+                console.log('=== VERIFICACIÓN EMERGENCIA PANIC MODE ===');
+                if (contract) {
+                  try {
+                    const realPanicMode = await contract.isPanicMode();
+                    console.log('Estado REAL del contrato - isPanicMode:', realPanicMode);
+                    console.log('Estado actual del frontend:', panicModeActive);
+                    
+                    // Forzar la actualización
+                    setPanicModeActive(realPanicMode);
+                    console.log('Estado forzado a:', realPanicMode);
+                    
+                    toast.info(`Estado real: ${realPanicMode ? 'PÁNICO ACTIVO' : 'NORMAL'}`);
+                  } catch (error) {
+                    console.error('Error verificando estado real:', error);
+                  }
+                }
+              }} style={{margin: '5px', padding: '5px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer'}}>
+                🚨 Verificar Estado Real
               </button>
               <span style={{margin: '0 10px', fontSize: '0.9rem'}}>
                 IsOwner: <strong style={{color: isOwner ? 'green' : 'red'}}>{isOwner ? 'SÍ' : 'NO'}</strong>
+                | PanicMultisig: <strong style={{color: isPanicMultisig ? 'green' : 'red'}}>{isPanicMultisig ? 'SÍ' : 'NO'}</strong>
+                | PanicMode: <strong style={{color: panicModeActive ? 'red' : 'green'}}>{panicModeActive ? 'ACTIVO' : 'INACTIVO'}</strong>
               </span>
             </div>
           )}
 
-          {loading && <div className="loading">Cargando...</div>}          {activeTab === 'dashboard' && (
+          {loading && <div className="loading">Cargando...</div>}          {/* Panel de Pánico para Panic Multisig (visible fuera del admin) */}
+          {isPanicMultisig && (
+            <div className="panic-control-panel">
+              <div className={`card ${panicModeActive ? 'panic-card' : 'panic-ready-card'}`}>
+                {panicModeActive ? (
+                  <>
+                    <h2>🚨 MODO PÁNICO ACTIVO</h2>
+                    <p>Eres la multisig de pánico. La DAO está suspendida. Puedes restaurar la operación normal.</p>
+                    <button 
+                      className="btn btn-success btn-large" 
+                      onClick={handleTranquility}
+                      disabled={loading}
+                    >
+                      😌 Restaurar Tranquilidad
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3>🛡️ PANIC MULTISIG</h3>
+                    <p>Eres la multisig de pánico. La DAO está operando normalmente.</p>
+                    <div className="status-indicator panic-inactive">
+                      ✅ Sistema Normal
+                    </div>
+                    <small style={{display: 'block', marginTop: '10px', opacity: 0.8}}>
+                      Podrás restaurar la tranquilidad si el owner activa el modo pánico.
+                    </small>
+                  </>
+                )}
+              </div>
+            </div>
+          )}{activeTab === 'dashboard' && (
             <div className="card">
               <h2>📊 Dashboard</h2>              <div className="stats-grid">
                 <div className="stat-card">
@@ -2062,29 +2267,59 @@ function App() {
                     </button>
                   </form>
                 </div>
+              </div>              <div className="admin-section">
+                <h3>🚨 Control de Pánico</h3>
+                <div className="panic-status">
+                  <span className={`status-indicator ${panicModeActive ? 'panic-active' : 'panic-inactive'}`}>
+                    Estado: {panicModeActive ? '🚨 PÁNICO ACTIVO' : '✅ Normal'}
+                  </span>
+                </div>
+                <div style={{display: 'flex', gap: '10px'}}>
+                  {isOwner && (
+                    <button 
+                      className="btn btn-danger" 
+                      onClick={handlePanic}
+                      disabled={loading || panicModeActive}
+                    >
+                      🚨 Activar Pánico
+                    </button>
+                  )}
+                  {isPanicMultisig && (
+                    <button 
+                      className="btn btn-success" 
+                      onClick={handleTranquility}
+                      disabled={loading || !panicModeActive}
+                    >
+                      😌 Restaurar Tranquilidad
+                    </button>
+                  )}
+                </div>
+                <small style={{color: 'rgba(255,255,255,0.6)', marginTop: '10px', display: 'block'}}>
+                  Pánico: Solo owner puede activar. Tranquilidad: Solo panic multisig puede activar.
+                </small>
               </div>
 
               <div className="admin-section">
-                <h3>🚨 Control de Pánico</h3>
-                <div style={{display: 'flex', gap: '10px'}}>
-                  <button 
-                    className="btn btn-danger" 
-                    onClick={handlePanic}
-                    disabled={loading}
-                  >
-                    🚨 Panic
+                <h3>👑 Transferir Ownership</h3>
+                <form onSubmit={handleTransferOwnership}>
+                  <div className="form-group">
+                    <label>Nueva dirección owner:</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newOwnerAddress}
+                      onChange={(e) => setNewOwnerAddress(e.target.value)}
+                      placeholder="0x..."
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-warning" disabled={loading}>
+                    {loading ? 'Transfiriendo...' : 'Transferir Ownership'}
                   </button>
-                  <button 
-                    className="btn btn-success" 
-                    onClick={handleTranquility}
-                    disabled={loading}
-                  >
-                    😌 Tranquility
-                  </button>
-                </div>
-                <small style={{color: 'rgba(255,255,255,0.6)', marginTop: '10px', display: 'block'}}>
-                  Panic suspende todas las operaciones. Tranquility solo puede ser ejecutado por panic multisig.
-                </small>
+                  <small style={{color: 'rgba(255,255,255,0.6)', marginTop: '10px', display: 'block'}}>
+                    ⚠️ Esta acción es irreversible. El nuevo owner tendrá control total del contrato.
+                  </small>
+                </form>
               </div>
             </div>
           )}
