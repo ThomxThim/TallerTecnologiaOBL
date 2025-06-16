@@ -162,10 +162,16 @@ function App() {
       if (walletType === 'metamask') {
         const provider = window.ethereum.providers.find(p => p.isMetaMask);
         console.log('MetaMask provider encontrado:', !!provider);
-        return provider;
-      } else if (walletType === 'rabby') {
+        return provider;      } else if (walletType === 'rabby') {
         const provider = window.ethereum.providers.find(p => p.isRabby);
         console.log('Rabby provider encontrado:', !!provider);
+        if (!provider) {
+          console.log('Rabby providers disponibles:', window.ethereum.providers.map(p => ({
+            isRabby: p.isRabby,
+            isMetaMask: p.isMetaMask,
+            chainId: p.chainId
+          })));
+        }
         return provider;
       }
     } else {
@@ -262,12 +268,15 @@ function App() {
       setIsConnecting(true);
       setConnectionError('');
       setNetworkError('');
-      console.log(`Iniciando conexión con ${walletType}`);
-
-      // Verificar disponibilidad del provider
+      console.log(`Iniciando conexión con ${walletType}`);      // Verificar disponibilidad del provider
       const ethereum = getProvider(walletType);
       if (!ethereum) {
-        const errorMsg = `${walletType} no está disponible. ¿Está instalado?`;
+        let errorMsg;
+        if (walletType === 'rabby') {
+          errorMsg = 'Rabby Wallet no detectado. Asegúrate de que:\n1. Rabby esté instalado\n2. Estés en la red "Hardhat Local" (Chain ID: 1337)\n3. Tengas la red configurada en Rabby';
+        } else {
+          errorMsg = `${walletType} no está disponible. ¿Está instalado?`;
+        }
         setConnectionError(errorMsg);
         toast.error(errorMsg);
         return;
