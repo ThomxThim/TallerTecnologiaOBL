@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts\DAO.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> DAO.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">98.81% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>83/84</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">83.08% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>108/130</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>25/25</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>111/111</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">173×</span>
+<span class="cline-any cline-yes">171×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">163×</span>
+<span class="cline-any cline-yes">161×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">54×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-yes">78×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">83×</span>
+<span class="cline-any cline-yes">82×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">81×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">81×</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">33×</span>
+<span class="cline-any cline-yes">33×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">25×</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22×</span>
+<span class="cline-any cline-yes">22×</span>
+<span class="cline-any cline-yes">22×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-yes">19×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./interface/IDAO.sol";
+&nbsp;
+contract DAO is ERC20, Ownable, ReentrancyGuard, IDAO {
+    // State variables
+    mapping(address =&gt; UserStaking) public userStaking;
+    mapping(uint256 =&gt; Proposal) public proposals;
+    mapping(uint256 =&gt; mapping(address =&gt; bool)) public hasVotedOnProposal;
+    mapping(uint256 =&gt; mapping(address =&gt; bool)) public userVotes; // true = for, false = against
+    mapping(bytes32 =&gt; uint256) public parameters;
+    
+    uint256 public proposalCount;
+    address public panicMultisig;
+    bool public isPanicMode;
+    
+    // Parameter keys
+    bytes32 public constant MIN_VOTING_STAKE = keccak256("MIN_VOTING_STAKE");
+    bytes32 public constant MIN_PROPOSAL_STAKE = keccak256("MIN_PROPOSAL_STAKE");
+    bytes32 public constant TOKEN_PRICE = keccak256("TOKEN_PRICE");
+    bytes32 public constant VOTING_DURATION = keccak256("VOTING_DURATION");
+    bytes32 public constant STAKING_LOCK_TIME = keccak256("STAKING_LOCK_TIME");
+    bytes32 public constant TOKENS_PER_VOTE = keccak256("TOKENS_PER_VOTE");
+    
+    modifier notInPanic() {
+        require(!isPanicMode, "DAO is in panic mode");
+        _;
+    }
+    
+    modifier onlyPanicMultisig() {
+        require(msg.sender == panicMultisig, "Only panic multisig");
+        _;
+    }
+    
+    modifier panicMultisigConfigured() {
+        require(panicMultisig != address(0), "Panic multisig not configured");
+        _;
+    }
+    
+    constructor(
+        string memory name,
+        string memory symbol,
+        address initialOwner
+    ) ERC20(name, symbol) Ownable(initialOwner) {
+        // Set default parameters
+        parameters[MIN_VOTING_STAKE] = 1000 * 10**decimals(); // 1000 tokens
+        parameters[MIN_PROPOSAL_STAKE] = 5000 * 10**decimals(); // 5000 tokens
+        parameters[TOKEN_PRICE] = 0.001 ether; // 0.001 ETH per token
+        parameters[VOTING_DURATION] = 7 days;
+        parameters[STAKING_LOCK_TIME] = 1 days;
+        parameters[TOKENS_PER_VOTE] = 1000 * 10**decimals(); // 1000 tokens = 1 vote
+    }
+    
+    // Owner functions
+    function mintTokens(address to, uint256 amount) external override onlyOwner {
+        _mint(to, amount);
+    }
+    
+    function setParameter(bytes32 param, uint256 value) external override onlyOwner {
+        require(value &gt; 0, "Parameter value must be positive");
+        parameters[param] = value;
+    }
+    
+    function setPanicMultisig(address _panicMultisig) external override onlyOwner {
+        require(_panicMultisig != address(0), "Invalid address");
+        panicMultisig = _panicMultisig;
+    }
+    
+    function transferOwnership(address newOwner) public override(Ownable, IDAO) onlyOwner {
+        require(newOwner != address(0), "Invalid address");
+        super.transferOwnership(newOwner);
+    }
+    
+    function panic() external override onlyOwner panicMultisigConfigured {
+        isPanicMode = true;
+        emit PanicActivated();
+    }
+    
+    // Panic multisig functions
+    function tranquility() external override onlyPanicMultisig {
+        isPanicMode = false;
+        emit TranquilityRestored();
+    }
+    
+    // User functions
+    function buyTokens() external payable override notInPanic panicMultisigConfigured {
+        require(msg.value &gt; 0, "Must send ETH");
+        uint256 tokenPrice = parameters[TOKEN_PRICE];
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(tokenPrice &gt; 0, "Token price not set");
+        
+        uint256 tokenAmount = (msg.value * 10**decimals()) / tokenPrice;
+        require(tokenAmount &gt; 0, "Insufficient ETH for tokens");
+        
+        _mint(msg.sender, tokenAmount);
+        emit TokensPurchased(msg.sender, tokenAmount, msg.value);
+    }
+    
+    function stakeTokens(uint256 amount, bool forVoting) external override notInPanic <span class="missing-if-branch" title="else path not taken" >E</span>panicMultisigConfigured {
+        require(amount &gt; 0, "Amount must be positive");
+        require(balanceOf(msg.sender) &gt;= amount, "Insufficient balance");
+        
+        UserStaking storage staking = userStaking[msg.sender];
+        
+        if (forVoting) {
+            require(amount &gt;= parameters[MIN_VOTING_STAKE], "Below minimum voting stake");
+            staking.votingStake += amount;
+            staking.votingUnlockTime = block.timestamp + parameters[STAKING_LOCK_TIME];
+        } else {
+            require(amount &gt;= parameters[MIN_PROPOSAL_STAKE], "Below minimum proposal stake");
+            staking.proposalStake += amount;
+            staking.proposalUnlockTime = block.timestamp + parameters[STAKING_LOCK_TIME];
+        }
+        
+        _transfer(msg.sender, address(this), amount);
+        emit TokensStaked(msg.sender, amount, forVoting);
+    }
+    
+    function unstakeTokens(uint256 amount, bool forVoting) external override <span class="missing-if-branch" title="else path not taken" >E</span>notInPanic {
+        require(amount &gt; 0, "Amount must be positive");
+        
+        UserStaking storage staking = userStaking[msg.sender];
+        
+        if (forVoting) {
+            require(staking.votingStake &gt;= amount, "Insufficient voting stake");
+            require(block.timestamp &gt;= staking.votingUnlockTime, "Voting stake still locked");
+            staking.votingStake -= amount;
+        } else {
+            <span class="missing-if-branch" title="else path not taken" >E</span>require(staking.proposalStake &gt;= amount, "Insufficient proposal stake");
+            <span class="missing-if-branch" title="else path not taken" >E</span>require(block.timestamp &gt;= staking.proposalUnlockTime, "Proposal stake still locked");
+            staking.proposalStake -= amount;
+        }
+        
+        _transfer(address(this), msg.sender, amount);
+        emit TokensUnstaked(msg.sender, amount, forVoting);
+    }
+    
+    function createProposal(string memory title, string memory description) external override <span class="missing-if-branch" title="else path not taken" >E</span>notInPanic <span class="missing-if-branch" title="else path not taken" >E</span>panicMultisigConfigured returns (uint256) {
+        require(bytes(title).length &gt; 0, "Title cannot be empty");
+        require(bytes(description).length &gt; 0, "Description cannot be empty");
+        require(userStaking[msg.sender].proposalStake &gt;= parameters[MIN_PROPOSAL_STAKE], "Insufficient proposal stake");
+        
+        uint256 proposalId = proposalCount++;
+        
+        proposals[proposalId] = Proposal({
+            id: proposalId,
+            title: title,
+            description: description,
+            proposer: msg.sender,
+            forVotes: 0,
+            againstVotes: 0,
+            startTime: block.timestamp,
+            endTime: block.timestamp + parameters[VOTING_DURATION],
+            state: ProposalState.Active,
+            proposalType: ProposalType.Standard,
+            treasuryTarget: address(0),
+            treasuryAmount: 0,
+            executed: false
+        });
+        
+        emit ProposalCreated(proposalId, msg.sender, title, ProposalType.Standard);
+        return proposalId;
+    }
+    
+    function createTreasuryProposal(
+        string memory title, 
+        string memory description, 
+        address target, 
+        uint256 amount
+    ) external override <span class="missing-if-branch" title="else path not taken" >E</span>notInPanic <span class="missing-if-branch" title="else path not taken" >E</span>panicMultisigConfigured returns (uint256) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(bytes(title).length &gt; 0, "Title cannot be empty");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(bytes(description).length &gt; 0, "Description cannot be empty");
+        require(target != address(0), "Invalid target address");
+        require(amount &gt; 0, "Amount must be positive");
+        require(amount &lt;= address(this).balance, "Insufficient treasury balance");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(userStaking[msg.sender].proposalStake &gt;= parameters[MIN_PROPOSAL_STAKE], "Insufficient proposal stake");
+        
+        uint256 proposalId = proposalCount++;
+        
+        proposals[proposalId] = Proposal({
+            id: proposalId,
+            title: title,
+            description: description,
+            proposer: msg.sender,
+            forVotes: 0,
+            againstVotes: 0,
+            startTime: block.timestamp,
+            endTime: block.timestamp + parameters[VOTING_DURATION],
+            state: ProposalState.Active,
+            proposalType: ProposalType.Treasury,
+            treasuryTarget: target,
+            treasuryAmount: amount,
+            executed: false
+        });
+        
+        emit ProposalCreated(proposalId, msg.sender, title, ProposalType.Treasury);
+        return proposalId;
+    }
+    
+    function vote(uint256 proposalId, bool support) external override <span class="missing-if-branch" title="else path not taken" >E</span>notInPanic <span class="missing-if-branch" title="else path not taken" >E</span>panicMultisigConfigured {
+        require(proposalId &lt; proposalCount, "Proposal does not exist");
+        require(!hasVotedOnProposal[proposalId][msg.sender], "Already voted");
+        require(userStaking[msg.sender].votingStake &gt;= parameters[MIN_VOTING_STAKE], "Insufficient voting stake");
+        
+        Proposal storage proposal = proposals[proposalId];
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(proposal.state == ProposalState.Active, "Proposal not active");
+        require(block.timestamp &lt;= proposal.endTime, "Voting period ended");
+        
+        uint256 votingPower = getVotingPower(msg.sender);
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(votingPower &gt; 0, "No voting power");
+        
+        hasVotedOnProposal[proposalId][msg.sender] = true;
+        userVotes[proposalId][msg.sender] = support;
+        
+        if (support) {
+            proposal.forVotes += votingPower;
+        } else {
+            proposal.againstVotes += votingPower;
+        }
+        
+        emit VoteCast(proposalId, msg.sender, support, votingPower);
+    }
+    
+    function executeProposal(uint256 proposalId) external override <span class="missing-if-branch" title="else path not taken" >E</span>notInPanic {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(proposalId &lt; proposalCount, "Proposal does not exist");
+        
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.state == ProposalState.Active, "Proposal not active");
+        require(block.timestamp &gt; proposal.endTime, "Voting period not ended");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(!proposal.executed, "Proposal already executed");
+        
+        // Determine result
+        if (proposal.forVotes &gt; proposal.againstVotes) {
+            proposal.state = ProposalState.Accepted;
+            
+            // Execute treasury proposal if accepted
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (proposal.proposalType == ProposalType.Treasury) {
+                require(proposal.treasuryAmount &lt;= address(this).balance, "Insufficient treasury balance");
+                
+                (bool success, ) = proposal.treasuryTarget.call{value: proposal.treasuryAmount}("");
+                <span class="missing-if-branch" title="else path not taken" >E</span>require(success, "Treasury transfer failed");
+                
+                emit TreasuryTransfer(proposal.treasuryTarget, proposal.treasuryAmount);
+            }
+        } else {
+            proposal.state = ProposalState.Rejected;
+        }
+        
+        proposal.executed = true;
+        emit ProposalExecuted(proposalId, proposal.state);
+    }
+    
+    // View functions
+    function getTokenBalance(address user) external view override returns (uint256) {
+        return balanceOf(user);
+    }
+    
+    function getUserStaking(address user) external view override returns (UserStaking memory) {
+        return userStaking[user];
+    }
+    
+    function getProposal(uint256 proposalId) external view override returns (Proposal memory) {
+        require(proposalId &lt; proposalCount, "Proposal does not exist");
+        return proposals[proposalId];
+    }
+    
+    function getProposalCount() external view override returns (uint256) {
+        return proposalCount;
+    }
+    
+    function getVotingPower(address user) public view override returns (uint256) {
+        uint256 stakedTokens = userStaking[user].votingStake;
+        uint256 tokensPerVote = parameters[TOKENS_PER_VOTE];
+        
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (tokensPerVote == 0) <span class="cstat-no" title="statement not covered" >return 0;</span>
+        return stakedTokens / tokensPerVote;
+    }
+    
+    function hasVoted(uint256 proposalId, address user) external view override returns (bool) {
+        return hasVotedOnProposal[proposalId][user];
+    }
+    
+    function getParameter(bytes32 param) external view override returns (uint256) {
+        return parameters[param];
+    }
+    
+    // Function to receive ETH for treasury
+    receive() external payable {
+        // ETH sent to contract goes to treasury
+    }
+    
+    // Function to check treasury balance
+    function getTreasuryBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Jun 23 2025 18:26:39 GMT-0300 (hora estándar de Uruguay)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

@@ -1,14 +1,15 @@
 require("@nomicfoundation/hardhat-toolbox");
 require('dotenv').config();
+require('solidity-coverage');
 
-module.exports = {
-  solidity: {
+module.exports = {  solidity: {
     version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,
         runs: 200,
       },
+      viaIR: true,
     },
   },
   paths: {
