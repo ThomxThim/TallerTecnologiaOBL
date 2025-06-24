@@ -1,14 +1,23 @@
 {
   "name": "dao-governance",
   "version": "1.0.0",
-  "description": "DAO Governance System with Treasury Management",
-  "scripts": {
+  "description": "DAO Governance System with Treasury Management",  "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:coverage": "hardhat coverage",
-    "deploy": "hardhat run scripts/deploy.js",
+    "deploy": "hardhat run scripts/deploy-local.js --network localhost",
+    "deploy:local": "hardhat run scripts/deploy-local.js --network localhost",
+    "deploy:ganache": "hardhat run scripts/deploy-local.js --network ganache",
+    "deploy:mumbai": "hardhat run scripts/deploy-testnet.js --network polygon_mumbai",
+    "deploy:sepolia": "hardhat run scripts/deploy-testnet.js --network sepolia",
+    "verify": "hardhat run scripts/verify-contract.js",
+    "verify:mumbai": "echo 'Run: npx hardhat verify --network polygon_mumbai <CONTRACT_ADDRESS> \"DAO Governance Token\" \"DAOT\" \"<DEPLOYER_ADDRESS>\"'",
+    "verify:sepolia": "echo 'Run: npx hardhat verify --network sepolia <CONTRACT_ADDRESS> \"DAO Governance Token\" \"DAOT\" \"<DEPLOYER_ADDRESS>\"'",
     "start": "cd frontend && npm start",
-    "install-all": "npm install && cd frontend && npm install"
+    "install-all": "npm install && cd frontend && npm install",
+    "check-ganache": "curl -X POST -H \"Content-Type: application/json\" --data '{\"jsonrpc\":\"2.0\",\"method\":\"eth_accounts\",\"params\":[],\"id\":1}' http://localhost:8545",
+    "check-env": "node scripts/check-environment.js",
+    "setup-local": "npm run install-all && npm run compile && npm run deploy:local"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",

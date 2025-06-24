@@ -33,7 +33,7 @@ const DAO_ABI = [
   "event ProposalExecuted(uint256 indexed proposalId, uint8 result)"
 ];
 
-const DAO_CONTRACT_ADDRESS = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+const DAO_CONTRACT_ADDRESS = "0x73798Ab895795825d2c92ce792aeD01Ff8eeAC21"; // Sepolia Testnet
 
 // Funciones de conversión entre ETH y Tokens
 const getTokenPrice = async (contractInstance) => {
