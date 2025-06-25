@@ -15,9 +15,9 @@ async function main() {
     console.log("💰 Account balance:", ethers.formatEther(balance), "ETH");
     
     // Check if we have enough balance
-    const minBalance = ethers.parseEther("0.1"); // Minimum 0.1 ETH
+    const minBalance = ethers.parseEther("0.05"); // Minimum 0.05 ETH (reducido)
     if (balance < minBalance) {
-        throw new Error(`❌ Insufficient balance. Need at least 0.1 ETH, have ${ethers.formatEther(balance)} ETH`);
+        throw new Error(`❌ Insufficient balance. Need at least 0.05 ETH, have ${ethers.formatEther(balance)} ETH`);
     }
     
     // Deploy DAO contract
@@ -54,8 +54,8 @@ async function main() {
     await mintTx.wait();
     console.log("✅ Minted", ethers.formatEther(mintAmount), "tokens to deployer");
     
-    // Add some ETH to treasury (0.01 ETH)
-    const treasuryAmount = ethers.parseEther("0.01");
+    // Add some ETH to treasury (0.005 ETH - reducido)
+    const treasuryAmount = ethers.parseEther("0.005");
     const treasuryTx = await dao.buyTokens({ value: treasuryAmount });
     await treasuryTx.wait();
     console.log("✅ Added", ethers.formatEther(treasuryAmount), "ETH to treasury");

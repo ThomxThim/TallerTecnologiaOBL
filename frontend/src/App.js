@@ -33,7 +33,12 @@ const DAO_ABI = [
   "event ProposalExecuted(uint256 indexed proposalId, uint8 result)"
 ];
 
-const DAO_CONTRACT_ADDRESS = "0x73798Ab895795825d2c92ce792aeD01Ff8eeAC21"; // Sepolia Testnet
+// Direcciones del contrato DAO por red
+const CONTRACT_ADDRESSES = {
+  "0x7a69": "0x5FbDB2315678afecb367f032d93F642f64180aa3", // Hardhat Local (chainId: 31337)
+  "0xaa36a7": "0x0e478f3405F94b67F9f63f097DeDc3a9aaE21CF2" // Sepolia Testnet (chainId: 11155111) 
+};
+
 
 // Funciones de conversión entre ETH y Tokens
 const getTokenPrice = async (contractInstance) => {
@@ -227,7 +232,89 @@ function App() {
     console.error(`Provider ${walletType} no encontrado`);
     return null;
   };
-  // Función mejorada para cambiar a la red de Hardhat
+  // Función para detectar y usar la red actual de la wallet
+  const detectAndUseCurrentNetwork = async (ethereum) => {
+    if (!ethereum) {
+      console.error('No hay provider disponible para detectar red');
+      return false;
+    }
+
+    try {
+      // Obtener red actual
+      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+      const chainIdNumber = parseInt(currentChainId, 16);
+      
+      console.log('Red actual detectada:', {
+        hex: currentChainId,
+        decimal: chainIdNumber,
+        name: getNetworkName(chainIdNumber)
+      });
+      
+      // Verificar si el contrato está desplegado en esta red
+      const contractAddress = getContractAddressForNetwork(chainIdNumber);
+      if (!contractAddress) {
+        console.warn(`⚠️ No hay contrato configurado para la red ${getNetworkName(chainIdNumber)} (${chainIdNumber})`);
+        toast.warn(`El contrato no está configurado para ${getNetworkName(chainIdNumber)}. Usa red local (Hardhat) o configura el contrato en esta red.`);
+        
+        // Ofrecer cambiar a Hardhat si está disponible
+        const shouldSwitchToLocal = window.confirm('¿Quieres cambiar a la red local de Hardhat?');
+        if (shouldSwitchToLocal) {
+          return await switchToHardhatNetwork(ethereum);
+        }
+        return false;
+      }
+      
+      // Actualizar la dirección del contrato según la red
+      updateContractAddress(contractAddress);
+      
+      toast.success(`Usando ${getNetworkName(chainIdNumber)} con contrato en ${contractAddress.substring(0,8)}...`);
+      return true;
+      
+    } catch (error) {
+      console.error('Error detectando red:', error);
+      toast.error(`Error detectando la red: ${error.message || 'Error desconocido'}`);
+      return false;
+    }
+  };
+
+  // Función auxiliar para obtener el nombre de la red
+  const getNetworkName = (chainId) => {
+    const networks = {
+      1: 'Ethereum Mainnet',
+      11155111: 'Sepolia Testnet', 
+      137: 'Polygon Mainnet',
+      80001: 'Mumbai Testnet',
+      1337: 'Hardhat Local'
+    };
+    return networks[chainId] || `Red Desconocida (${chainId})`;
+  };
+
+  // Función para obtener la dirección del contrato según la red
+  const getContractAddressForNetwork = (chainId) => {
+    const contractAddresses = {
+      1337: "0x5FbDB2315678afecb367f032d93F642f64180aa3", // Hardhat Local
+      11155111: "0x0e478f3405F94b67F9f63f097DeDc3a9aaE21CF2", // Sepolia - ACTUALIZADA
+      // Agrega más redes aquí cuando despliegues el contrato
+    };
+    return contractAddresses[chainId] || null;
+  };
+
+  // Función para actualizar la dirección del contrato dinámicamente
+  const updateContractAddress = (newAddress) => {
+    // Esta función actualizará la dirección del contrato actual
+    window.CURRENT_DAO_CONTRACT_ADDRESS = newAddress;
+    console.log('Dirección del contrato actualizada a:', newAddress);
+  };
+
+  // Función helper para obtener la dirección del contrato actual
+  const getCurrentContractAddress = () => {
+    return window.CURRENT_DAO_CONTRACT_ADDRESS || 
+           CONTRACT_ADDRESSES["0xaa36a7"] || // Sepolia por defecto
+           CONTRACT_ADDRESSES["0x7a69"] || // Hardhat como fallback
+           "0x0e478f3405F94b67F9f63f097DeDc3a9aaE21CF2"; // Dirección nueva de Sepolia como último fallback
+  };
+
+  // Función de respaldo para cambiar a Hardhat (mantenida para compatibilidad)
   const switchToHardhatNetwork = async (ethereum) => {
     if (!ethereum) {
       console.error('No hay provider disponible para cambiar red');
@@ -310,7 +397,7 @@ function App() {
       if (!ethereum) {
         let errorMsg;
         if (walletType === 'rabby') {
-          errorMsg = 'Rabby Wallet no detectado. Asegúrate de que:\n1. Rabby esté instalado\n2. Estés en la red "Hardhat Local" (Chain ID: 1337)\n3. Tengas la red configurada en Rabby';
+          errorMsg = 'Rabby Wallet no detectado. Asegúrate de que:\n1. Rabby esté instalado\n2. Tengas una red configurada\n3. El contrato esté desplegado en tu red actual';
         } else {
           errorMsg = `${walletType} no está disponible. ¿Está instalado?`;
         }
@@ -321,10 +408,10 @@ function App() {
 
       console.log(`Provider ${walletType} encontrado`);
 
-      // Verificar conexión a la red correcta
-      const networkConfigured = await switchToHardhatNetwork(ethereum);
+      // Usar la red actual de la wallet en lugar de forzar Hardhat
+      const networkConfigured = await detectAndUseCurrentNetwork(ethereum);
       if (!networkConfigured) {
-        setNetworkError('Red incorrecta');
+        setNetworkError('Red no soportada o contrato no desplegado');
         return;
       }
 
@@ -378,38 +465,41 @@ function App() {
       let contract;
       try {
         console.log('Creando instancia del contrato...');
-        contract = new ethers.Contract(DAO_CONTRACT_ADDRESS, DAO_ABI, signer);
+        
+        // Usar la dirección dinámica del contrato o la por defecto
+        const contractAddress = getCurrentContractAddress();
+        console.log('Usando dirección de contrato:', contractAddress);
+        
+        contract = new ethers.Contract(contractAddress, DAO_ABI, signer);
         console.log('Contrato creado:', contract.target);
       } catch (contractError) {
         console.error('Error creando contrato:', contractError);
         toast.error(`Error creando contrato: ${contractError.message}`);
-        return;      }
+        return;
+      }
 
       // Verificar que el contrato esté desplegado
       try {
-        console.log('Verificando contrato en dirección:', DAO_CONTRACT_ADDRESS);
+        const contractAddress = getCurrentContractAddress();
+        console.log('Verificando contrato en dirección:', contractAddress);
         
         // Verificar la red actual
         const network = await provider.getNetwork();
-        console.log('Red actual:', network);        console.log('Chain ID:', network.chainId);
+        console.log('Red actual:', network);
+        console.log('Chain ID:', network.chainId);
         
-        // Verificar si estamos en la red correcta (1337 = Hardhat local)
-        // Convertir a número para manejar BigInt
+        // Permitir cualquier red que tenga el contrato desplegado
         const chainIdNumber = Number(network.chainId);
-        if (chainIdNumber !== 1337) {
-          console.warn('Red incorrecta. Esperado: 1337, Actual:', chainIdNumber);
-          toast.error('Por favor cambia a la red local de Hardhat (Chain ID: 1337)');
-          return;
-        }
+        console.log(`Conectado a red ${getNetworkName(chainIdNumber)} (${chainIdNumber})`);
         
-        const code = await provider.getCode(DAO_CONTRACT_ADDRESS);
+        const code = await provider.getCode(contractAddress);
         console.log('Código del contrato (primeros 100 chars):', code.substring(0, 100));
         console.log('Longitud del código:', code.length);
         
         if (code === '0x') {
-          throw new Error('El contrato no está desplegado en esta dirección');
+          throw new Error(`El contrato no está desplegado en ${getNetworkName(chainIdNumber)}`);
         }
-        console.log('Contrato verificado exitosamente');
+        console.log('Contrato verificado exitosamente en', getNetworkName(chainIdNumber));
       } catch (verifyError) {
         console.error('Error verificando contrato:', verifyError);
         toast.error(`Error: ${verifyError.message}. ¿Está desplegado el contrato en la red local?`);
@@ -505,16 +595,36 @@ function App() {
     });
 
     // Listener para cambio de red
-    ethereum.on('chainChanged', (chainId) => {
+    ethereum.on('chainChanged', async (chainId) => {
       console.log('Red cambiada a:', chainId);
-      if (chainId !== '0x539') {
-        setNetworkError('Red incorrecta');
-        toast.error('Red incorrecta. Cambia a la red local de Hardhat (localhost:8545)');
+      const chainIdNumber = parseInt(chainId, 16);
+      const networkName = getNetworkName(chainIdNumber);
+      
+      console.log(`Red cambiada a ${networkName} (${chainIdNumber})`);
+      
+      // Verificar si el contrato está disponible en la nueva red
+      const contractAddress = getContractAddressForNetwork(chainIdNumber);
+      
+      if (!contractAddress) {
+        setNetworkError('Contrato no disponible en esta red');
+        toast.warn(`El contrato no está desplegado en ${networkName}. Usa Hardhat Local o configura el contrato en esta red.`);
+        
+        // Ofrecer cambiar a Hardhat
+        setTimeout(() => {
+          const shouldSwitch = window.confirm('¿Quieres cambiar a Hardhat Local donde está desplegado el contrato?');
+          if (shouldSwitch) {
+            switchToHardhatNetwork(ethereum);
+          }
+        }, 2000);
       } else {
         setNetworkError('');
-        toast.success('Conectado a la red correcta');
-        // Recargar la página para asegurar una conexión limpia
-        window.location.reload();
+        updateContractAddress(contractAddress);
+        toast.success(`Conectado a ${networkName}. Usando contrato en ${contractAddress.substring(0,8)}...`);
+        
+        // Recargar la página para usar el nuevo contrato
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     });
 
@@ -543,7 +653,10 @@ function App() {
       setConnectedWalletType('');
       setIsConnecting(false);
       setNetworkError('');
-      setConnectionError('');      // Resetear datos de la aplicación
+      setConnectionError('');
+
+      // Limpiar dirección de contrato dinámica
+      window.CURRENT_DAO_CONTRACT_ADDRESS = null;      // Resetear datos de la aplicación
       setBalance('0');
       setEthBalance('0');
       setStaking({ votingStake: '0', proposalStake: '0', votingUnlockTime: 0, proposalUnlockTime: 0 });
@@ -1284,7 +1397,7 @@ function App() {
   }, [activeTab, contract, loadProposals]);
   const debugConnection = async () => {
     console.log('=== DEBUG CONNECTION ===');
-    console.log('Contract Address:', DAO_CONTRACT_ADDRESS);
+    console.log('Contract Address:', getCurrentContractAddress());
     
     if (provider) {
       try {
@@ -1488,6 +1601,27 @@ function App() {
         <div className="header">
         <h1>🏛️ DAO Governance</h1>
         <p>Sistema de Gobernanza Descentralizada con Gestión de Tesorería</p>
+        
+        {/* Indicador de Red */}
+        {provider && (
+          <div className="network-indicator">
+            <span className="network-label">🌐 Red:</span>
+            <span className="network-name">
+              {(() => {
+                try {
+                  const chainId = provider.network?.chainId || provider._network?.chainId;
+                  const chainIdNumber = Number(chainId);
+                  return getNetworkName(chainIdNumber);
+                } catch {
+                  return 'Detectando...';
+                }
+              })()}
+            </span>
+            <span className="contract-address">
+              📄 Contrato: {getCurrentContractAddress().substring(0, 8)}...
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Sección de notificaciones de estado */}
@@ -1507,8 +1641,8 @@ function App() {
             <div className="status-card error">
               <div className="status-icon">🚫</div>
               <div className="status-content">
-                <strong>Error de Red</strong>
-                <small>{networkError} - Cambia a la red local de Hardhat (localhost:8545)</small>
+                <strong>Problema de Red</strong>
+                <small>{networkError} - Verifica que el contrato esté desplegado en tu red actual</small>
               </div>
             </div>
           )}
@@ -1859,7 +1993,7 @@ function App() {
                 <p><strong>Balance ETH:</strong> {parseFloat(ethBalance).toFixed(4)} ETH</p>
                 <p><strong>Balance Tokens:</strong> {parseFloat(balance).toFixed(2)} tokens</p>
                 <p><strong>Red:</strong> Hardhat Local (Chain ID: 1337)</p>
-                <p><strong>Contrato:</strong> <code>{DAO_CONTRACT_ADDRESS}</code></p>
+                <p><strong>Contrato:</strong> <code>{getCurrentContractAddress()}</code></p>
               </div>
             </div>
           )}          {activeTab === 'buy' && (
